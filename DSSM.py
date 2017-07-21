@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from Loss import NSNLLLoss
+from Loss import DSSMLoss
 import random
 import pickle
 import torch.optim as optim
@@ -32,18 +33,20 @@ class SpatioTemporalModel(nn.Module):
         for uid in range(0, u_size):
             self.uid_rid_sampling_info[uid] = []
 
-        self.rnn_short = nn.RNNCell(self.emb_dim_v, self.hidden_dim)
+        self.rnn_short = nn.RNNCell(self.emb_dim_v, self.hidden_dim) #TODO check GRU
         self.rnn_long = nn.GRUCell(self.emb_dim_v, self.hidden_dim)
         self.embedder_u = nn.Embedding(self.u_size, self.emb_dim_u)
         self.embedder_v = nn.Embedding(self.v_size, self.emb_dim_v)
-        self.embedder_v_context = nn.Embedding(self.v_size, self.hidden_dim)
+        # self.embedder_v_context = nn.Embedding(self.v_size, self.hidden_dim)
         self.embedder_t = nn.Embedding(self.t_size, self.emb_dim_t)
-        dim_merged = self.hidden_dim * 3 + self.emb_dim_u + self.emb_dim_t * 2
-        self.ff1 = nn.Linear(dim_merged, dim_merged / 2)
-        self.ff2 = nn.Linear(dim_merged / 2, 2)
+        # dim_merged = self.hidden_dim * 2 + self.emb_dim_u + self.emb_dim_t * 2 + self.emb_dim_v
+        # self.ff1 = nn.Linear(dim_merged, dim_merged / 2)
+        # self.ff2 = nn.Linear(dim_merged / 2, 1)
+        self.embedder_v_context = nn.Embedding(self.v_size, self.hidden_dim * 2 + self.emb_dim_u + self.emb_dim_t)
 
     def forward(self, records_u, is_train, mod=0):
-        predicted_scores = Variable(torch.zeros(records_u.get_predicting_records_cnt(mod=0), self.nb_cnt + 1)) if is_train else []
+        # predicted_scores = Variable(torch.zeros(records_u.get_predicting_records_cnt(mod=0), self.nb_cnt + 1)) if is_train else []
+        predicted_scores = Variable(torch.zeros(records_u.get_predicting_records_cnt(mod=0), 1)) if is_train else []
         rid_vids_true = []
         rid_vids = []
         vids_visited = set()
@@ -52,27 +55,22 @@ class SpatioTemporalModel(nn.Module):
         emb_u = self.embedder_u(Variable(torch.LongTensor([records_u.uid])).view(1, -1)).view(1, -1)
         hidden_long = self.init_hidden()
         idx = 0
-        for rid, record in enumerate(records_al[0: len(records_al) - 1]):
+        for rid, record in enumerate(records_al[: -1]):
             if record.is_first:
                 hidden_short = self.init_hidden()
             vids_visited.add(record.vid)
             emb_v = self.embedder_v(Variable(torch.LongTensor([record.vid])).view(1, -1)).view(1, -1)
             emb_t = self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1)
             emb_t_next = self.embedder_t(Variable(torch.LongTensor([record.tid_next])).view(1, -1)).view(1, -1)
-            if is_train:
-                emb_u = F.dropout(emb_u, self.dropout)
-                emb_v = F.dropout(emb_v, self.dropout)
-                emb_t = F.dropout(emb_t, self.dropout)
-                emb_t_next = F.dropout(emb_t_next, self.dropout)
             hidden_long = self.rnn_long(emb_v, hidden_long)
             hidden_short = self.rnn_short(emb_v, hidden_short)
-            if record.is_last:
+            if record.is_last or record.is_first:
                 continue
 
-            hidden = torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1), emb_t.view(1, -1), emb_t_next.view(1, -1)), 1)
+            # hidden = torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1), emb_t.view(1, -1), emb_t_next.view(1, -1)), 1)
+            hidden = torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1), emb_t_next.view(1, -1)), 1)
             if is_train:
                 rid_vids_true.append(record.vid_next)
-                hidden = F.dropout(hidden)
                 vid_candidates = self.get_vids_candidate(records_u.uid, rid, record.vid_next, vids_visited, True, False)
                 scores = Variable(torch.zeros(1, self.nb_cnt + 1))
             else:
@@ -84,14 +82,17 @@ class SpatioTemporalModel(nn.Module):
                 else:
                     continue
             for vid_idx, vid_candidate in enumerate(vid_candidates):
-                emb_v_context = self.embedder_v_context(Variable(torch.LongTensor([vid_candidate])).view(1, -1))
-                if is_train:
-                    emb_v_context = F.dropout(emb_v_context)
-                input_vec = torch.cat((hidden.view(1, -1), emb_v_context.view(1, -1)), 1)
-                output_1 = F.relu(self.ff1(input_vec))
-                output_2 = F.sigmoid(self.ff2(output_1)) if is_train else F.softmax(self.ff2(output_1)) #TODO check
-                scores[0, vid_idx] = output_2[0, 1]
-            predicted_scores[idx] = scores
+                emb_v_context = self.embedder_v_context(Variable(torch.LongTensor([vid_candidate])).view(1, -1)).view(-1, 1)
+                # print hidden.size(), emb_v_context.size()
+                scores[0, vid_idx] = torch.mm(hidden, emb_v_context)
+                # print scores[0, vid_idx].size()
+                # raw_input()
+                # input_vec = torch.cat((hidden.view(1, -1), emb_v_context.view(1, -1)), 1)
+                # output_1 = F.relu(self.ff1(input_vec))
+                # output_2 = F.sigmoid(self.ff2(output_1)) # TODO check try matrix op
+                # scores[0, vid_idx] = output_2[0, 0]
+            # predicted_scores[idx] = scores
+            predicted_scores[idx] = F.softmax(scores)[0, 0] if is_train else F.softmax(scores)
             rid_vids.append(vid_candidates)
             idx += 1
         return predicted_scores, rid_vids, rid_vids_true
@@ -100,8 +101,10 @@ class SpatioTemporalModel(nn.Module):
         if not use_distance:
             if is_train:
                 vid_candidates = [vid_true]
-                for _ in range(self.nb_cnt):
-                    vid_candidates.append(self.sampling_list[random.randint(0, len(self.sampling_list) - 1)])
+                while len(vid_candidates) <= self.nb_cnt:
+                    vid_candidate = self.sampling_list[random.randint(0, len(self.sampling_list) - 1)]
+                    if vid_candidate != vid_true:
+                        vid_candidates.append(vid_candidate)
                 return vid_candidates
             else:
                 return range(self.v_size)
@@ -111,18 +114,20 @@ class SpatioTemporalModel(nn.Module):
             else:
                 nbs = set()
                 for vid_visited in vids_visited:
-                    vids = self.tree.query_radius([self.vid_coor_rad[vid_visited]], r=0.039240308)
-                    for vid in vids:
-                        nbs.add(vid)
+                    vids = self.tree.query_radius([self.vid_coor_rad[vid_visited]], r=0.000172657)
+                    for vid in vids[0]:
+                        if (not is_train) or (is_train and vid != vid_true):
+                            nbs.add(vid)
                 vids = list(nbs)
-                probs = np.array([self.vid_pop[vid] for vid in vids])
+                probs = np.array([self.vid_pop[vid] for vid in vids], dtype=np.float64)
                 probs /= probs.sum()
                 self.uid_rid_sampling_info[uid][rid] = (vids, probs)
             if is_train:
-                id_cnt = np.random.multinomial(self.nb_cnt, probs)[0]
+                id_cnt = np.random.multinomial(self.nb_cnt, probs)
                 vid_candidates = [vid_true]
                 for id, cnt in enumerate(id_cnt):
-                    vid_candidates.append(vids[id] for _ in range(cnt))
+                    for _ in range(cnt):
+                        vid_candidates.append(vids[id])
                 return vid_candidates
             else:
                 return vids
@@ -139,7 +144,7 @@ def train(root_path, n_iter=500, iter_start=0, mod=0):
     if iter_start != 0:
         model.load_state_dict(torch.load(root_path + 'model_simple_' + str(mod) + '_' + str(iter_start) + '.md'))
     optimizer = optim.Adam(model.parameters())
-    criterion = NSNLLLoss()
+    criterion = DSSMLoss()
     uids = dl.uid_records.keys()
     for iter in range(iter_start + 1, n_iter + 1):
         print_loss_total = 0
@@ -147,12 +152,12 @@ def train(root_path, n_iter=500, iter_start=0, mod=0):
         for idx, uid in enumerate(uids):
             records_u = dl.uid_records[uid]
             optimizer.zero_grad()
-            predicted_probs, _, _ = model(records_u, is_train=True, mod=0)
+            predicted_probs, _, _ = model(records_u, is_train=True, mod=mod)
             loss = criterion(predicted_probs)
             loss.backward()
             print_loss_total += loss.data[0]
             optimizer.step()
-            if idx % 1 == 0:
+            if idx % 50 == 0:
                 print 'uid: \t%d\tloss: %f' % (idx, print_loss_total)
         print iter, print_loss_total
         if iter % 5 == 0:
@@ -163,16 +168,18 @@ def test(root_path, iter_start=0, mod=0):
     random.seed(0)
     dl = pickle.load(open(root_path + 'dl.pk', 'rb'))
     for iter in range(iter_start, 0, -5):
+        # print root_path + 'model_simple_' + str(mod) + '_' + str(iter) + '.md'
         model = SpatioTemporalModel(dl.nu, dl.nv, dl.nt, sampling_list=dl.sampling_list, vid_coor_rad=dl.vid_coor_rad, vid_pop=dl.vid_pop)
         if iter_start != 0:
-            model.load_state_dict(root_path + 'model_simple_' + str(mod) + '_' + str(iter) + '.md')
+            model.load_state_dict(
+                torch.load(root_path + 'model_simple_' + str(mod) + '_' + str(iter) + '.md'))
         hits = np.zeros(3)
         cnt = 0
         for uid, records_u in dl.uid_records.items():
-            id_scores, id_vids, vids_true = model(records_u, is_train=False, mod=0)
-            for idx in range(0, len(id_vids)):
+            id_scores, id_vids, vids_true = model(records_u, is_train=False, mod=mod)
+            for idx in range(len(id_vids)):
                 probs_sorted, vid_sorted = torch.sort(id_scores[idx].view(-1), 0, descending=True)
-                vid_ranked = [id_vids[idx].data[id] for id in vid_sorted.data]
+                vid_ranked = [id_vids[idx][id] for id in vid_sorted.data]
                 cnt += 1
                 for j in range(10):
                     if vids_true[idx] == vid_ranked[j]:

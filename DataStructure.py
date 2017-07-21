@@ -11,6 +11,7 @@ class DataLoader(object):
     def __init__(self, hour_gap=6):
         self.hour_gap = hour_gap
         self.u_uid = {}
+        self.uid_u = {}
         self.v_vid = {}
         self.w_wid = {}
         self.uid_records = {}
@@ -26,11 +27,13 @@ class DataLoader(object):
         self.vid_pop = {}
         self.sampling_list = []
 
-    def add_records(self, file_path, dl_save_path, glove_path, glove_save_path, u_cnt_max=-1):
+    def add_records(self, file_path, dl_save_path, glove_path, glove_save_path, u_cnt_max=-1, blacklist=None):
         f = open(file_path, 'r', -1)
         for line in f:
             al = line.strip().split('\t')
             u = al[0]
+            if u in blacklist:
+                continue
             v = al[4]
             dt = datetime.datetime.strptime(al[1].strip('"'), '%Y-%m-%d %H:%M:%S')
             lat = string.atof(al[2])
@@ -39,6 +42,7 @@ class DataLoader(object):
                 if u_cnt_max > 0 and len(self.u_uid) >= u_cnt_max:
                     break
                 self.u_uid[u] = self.nu
+                self.uid_u[self.nu] = u
                 self.uid_records[self.nu] = UserRecords(self.nu)
                 self.nu += 1
             if v not in self.v_vid:
@@ -58,6 +62,7 @@ class DataLoader(object):
             uid = self.u_uid[u]
             vid = self.v_vid[v]
             self.sampling_list.append(vid)
+            self.vid_pop[vid] += 1
             self.uid_records[uid].add_record(dt, uid, vid, wids)
             self.nr += 1
         f.close()
@@ -159,11 +164,13 @@ class UserRecords(object):
         cnt = 0
         if mod == 0:  # train only
             for record in self.records[0: self.test_idx]:
-                if not record.is_last:
-                    cnt += 1
+                if record.is_last or record.is_first:
+                    continue
+                cnt += 1
             return cnt
         else:  # test only
             for record in self.records[self.test_idx: len(self.records)]:
-                if not record.is_last:
-                    cnt += 1
+                if record.is_last or record.is_first:
+                    continue
+                cnt += 1
             return cnt

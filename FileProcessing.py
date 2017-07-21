@@ -18,27 +18,36 @@ def generate_session_file(file_path, save_path, hour_gap=6):
         if u != u_pre:
             print u_pre, len(u_session)
             if len(u_session) >= 2:
+                session_valid_cnt = 0
                 for session in u_session:
-                    for l in session:
-                        fw.write(l + '\n')
+                    if len(session) > 2:
+                        session_valid_cnt += 1
+                if session_valid_cnt >= 2:
+                    for session in u_session:
+                        for l in session:
+                            fw.write(l + '\n')
             u_session = []
             session = []
             dt_pre = None
         if dt_pre is None:
             dt_pre = dt
         if (dt - dt_pre).total_seconds() / 3600.0 > hour_gap:
-            if len(session) >= 2:
-                u_session.append(session)
+            # if len(session) >= 2:
+            u_session.append(session)
             session = []
         session.append(line.strip())
         u_pre = u
         dt_pre = dt
-    if len(session) >= 2:
-        u_session.append(session)
+    u_session.append(session)
     if len(u_session) >= 2:
+        session_valid_cnt = 0
         for session in u_session:
-            for l in session:
-                fw.write(l + '\n')
+            if len(session) > 2:
+                session_valid_cnt += 1
+        if session_valid_cnt >= 2:
+            for session in u_session:
+                for l in session:
+                    fw.write(l + '\n')
     fr.close()
     fw.close()
 
