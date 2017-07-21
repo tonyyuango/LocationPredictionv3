@@ -32,7 +32,7 @@ class DataLoader(object):
         for line in f:
             al = line.strip().split('\t')
             u = al[0]
-            if u in blacklist:
+            if blacklist is not None and u in blacklist:
                 continue
             v = al[4]
             dt = datetime.datetime.strptime(al[1].strip('"'), '%Y-%m-%d %H:%M:%S')
