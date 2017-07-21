@@ -70,7 +70,7 @@ class SpatioTemporalModel(nn.Module):
             else:
                 if rid >= records_u.test_idx:
                     rid_vids_true.append(record.vid_next)
-                    vid_candidates = self.get_vids_candidate(records_u.uid, rid, record.vid_next, vids_visited, False, False if mod == 0 else True, record.vid)
+                    vid_candidates = self.get_vids_candidate(records_u.uid, rid, record.vid_next, vids_visited, False, False if mod == 0 else True)
                     predicted_scores.append([])
                 else:
                     continue
