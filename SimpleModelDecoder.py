@@ -140,7 +140,7 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
             loss.backward()
             print_loss_total += loss.data[0]
             optimizer.step()
-            if idx % 1 == 0:
+            if idx % 100 == 0:
                 print 'uid: \t%d\tloss: %f' % (idx, print_loss_total)
         print iter, print_loss_total
         if iter % 5 == 0:
