@@ -14,21 +14,21 @@ def prepare_data(root_path, small_path, u_cnt_max = -1):
 
     data_set = 'gowalla'
     dl = DataLoader(hour_gap=6)
-    # blacklist = set()
-    # f = open(root_path + 'blacklist_' + data_set + '.txt', 'r', -1)
-    # for l in f:
-    #     blacklist.add(l.strip())
-    # f.close()
+    blacklist = set()
+    f = open(root_path + 'blacklist_' + data_set + '.txt', 'r', -1)
+    for l in f:
+        blacklist.add(l.strip())
+    f.close()
     dl.add_records(root_path + 'checkins_session_' + data_set + '.txt', small_path + 'dl_' + data_set + '.pk',
                    root_path + '/glove.twitter.27B.50d.txt',
                    small_path + 'glove.txt', u_cnt_max, blacklist=None)
-    f = open(root_path + 'blacklist_' + data_set + '.txt', 'w', -1)
-    for uid, records_u in dl.uid_records.items():
-        cnt_train = records_u.get_predicting_records_cnt(mod=0)
-        cnt_test = records_u.get_predicting_records_cnt(mod=1)
-        if cnt_train == 0 or cnt_test == 0:
-            f.write(dl.uid_u[uid] + '\n')
-    f.close()
+    # f = open(root_path + 'blacklist_' + data_set + '.txt', 'w', -1)
+    # for uid, records_u in dl.uid_records.items():
+    #     cnt_train = records_u.get_predicting_records_cnt(mod=0)
+    #     cnt_test = records_u.get_predicting_records_cnt(mod=1)
+    #     if cnt_train == 0 or cnt_test == 0:
+    #         f.write(dl.uid_u[uid] + '\n')
+    # f.close()
 
     # print u_invalid
     # for uid, records_u in dl.uid_records.items():
@@ -46,11 +46,14 @@ if __name__ == "__main__":
     root_path = '/Users/quanyuan/Dropbox/Research/LocationPrediction/' \
         if os.path.exists('/Users/quanyuan/Dropbox/Research/LocationPrediction/') \
         else '/shared/data/qyuan/LocationPrediction/'
-    small_path = root_path + 'large/'
-    prepare_data(root_path, small_path, -1)
+    prepare_data(root_path, root_path + 'small/', 500)
+    prepare_data(root_path, root_path + 'medium/', 2000)
+    prepare_data(root_path, root_path + 'larege/', 10000)
+    prepare_data(root_path, root_path + 'full/', -1)
+    # dataset = '4sq'
     # dir = 0
     # task = 0
-    # mod = 0
+    # mod = 1
     # submod = 0
     # iter = 0
     # # dir = int(input('please dir (0: small, 1: medium, 2: large): '))
@@ -68,15 +71,15 @@ if __name__ == "__main__":
     # # iter = int(input('please input last iter: '))
     # if task == 0:
     #     if mod == 0:
-    #         NCF.train(small_path, iter_start=iter, mod=submod)
+    #         NCF.train(small_path, dataset, iter_start=iter, mod=submod)
     #     elif mod == 1:
-    #         SimpleModelDecoder.train(small_path, iter_start=iter, mod=submod)
+    #         SimpleModelDecoder.train(small_path, dataset, iter_start=iter, mod=submod)
     #     elif mod == 2:
-    #         DSSM.train(small_path, iter_start=iter, mod=submod)
+    #         DSSM.train(small_path, dataset, iter_start=iter, mod=submod)
     # else:
     #     if mod == 0:
-    #         NCF.test(small_path, iter_start=iter, mod=submod)
+    #         NCF.test(small_path, dataset, iter_start=iter, mod=submod)
     #     elif mod == 1:
-    #         SimpleModelDecoder.test(small_path, iter_start=iter, mod=submod)
+    #         SimpleModelDecoder.test(small_path, dataset, iter_start=iter, mod=submod)
     #     elif mod == 2:
-    #         DSSM.test(small_path, iter_start=iter, mod=submod)
+    #         DSSM.test(small_path, dataset, iter_start=iter, mod=submod)

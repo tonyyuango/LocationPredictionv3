@@ -136,10 +136,10 @@ class SpatioTemporalModel(nn.Module):
         return Variable(torch.zeros(1, self.hidden_dim))
 
 
-def train(root_path, n_iter=500, iter_start=0, mod=0):
+def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
     torch.manual_seed(0)
     random.seed(0)
-    dl = pickle.load(open(root_path + 'dl.pk', 'rb'))
+    dl = pickle.load(open(root_path + 'dl_' + dataset + '.pk', 'rb'))
     model = SpatioTemporalModel(dl.nu, dl.nv, dl.nt, sampling_list=dl.sampling_list, vid_coor_rad=dl.vid_coor_rad, vid_pop=dl.vid_pop)
     if iter_start != 0:
         model.load_state_dict(torch.load(root_path + 'model_simple_' + str(mod) + '_' + str(iter_start) + '.md'))
@@ -163,10 +163,10 @@ def train(root_path, n_iter=500, iter_start=0, mod=0):
         if iter % 5 == 0:
             torch.save(model.state_dict(), root_path + 'model_simple_' + str(mod) + '_' + str(iter) + '.md')
 
-def test(root_path, iter_start=0, mod=0):
+def test(root_path, dataset, iter_start=0, mod=0):
     torch.manual_seed(0)
     random.seed(0)
-    dl = pickle.load(open(root_path + 'dl.pk', 'rb'))
+    dl = pickle.load(open(root_path + 'dl_' + dataset + '.pk', 'rb'))
     for iter in range(iter_start, 0, -5):
         # print root_path + 'model_simple_' + str(mod) + '_' + str(iter) + '.md'
         model = SpatioTemporalModel(dl.nu, dl.nv, dl.nt, sampling_list=dl.sampling_list, vid_coor_rad=dl.vid_coor_rad, vid_pop=dl.vid_pop)
