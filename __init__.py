@@ -20,7 +20,7 @@ def prepare_data(root_path, small_path, u_cnt_max = -1):
         blacklist.add(l.strip())
     f.close()
     dl.add_records(root_path + 'checkins_session_' + data_set + '.txt', small_path + 'dl_' + data_set + '.pk',
-                   root_path + '/glove.twitter.27B.50d.txt',
+                   root_path + 'glove.twitter.27B.50d.txt',
                    small_path + 'glove.txt', u_cnt_max, blacklist=None)
     # f = open(root_path + 'blacklist_' + data_set + '.txt', 'w', -1)
     # for uid, records_u in dl.uid_records.items():
@@ -46,40 +46,40 @@ if __name__ == "__main__":
     root_path = '/Users/quanyuan/Dropbox/Research/LocationPrediction/' \
         if os.path.exists('/Users/quanyuan/Dropbox/Research/LocationPrediction/') \
         else '/shared/data/qyuan/LocationPrediction/'
-    # prepare_data(root_path, root_path + 'small/', 500)
-    # prepare_data(root_path, root_path + 'medium/', 2000)
+    prepare_data(root_path, root_path + 'small/', 500)
+    prepare_data(root_path, root_path + 'medium/', 2000)
     # prepare_data(root_path, root_path + 'larege/', 10000)
     # prepare_data(root_path, root_path + 'full/', -1)
-    dataset = '4sq'
-    # dir = 0
-    # task = 0
-    # mod = 1
-    # submod = 0
-    # iter = 0
-    dir = int(input('please dir (0: small, 1: medium, 2: large): '))
-    if dir == 0:
-        small_path = root_path + 'small/'
-    elif dir == 1:
-        small_path = root_path + 'medium/'
-    else:
-        small_path = root_path + 'large/'
-
-    task = int(input('please input task (0: train, 1: test, 2: baselines): '))
-    mod = int(input(
-        'please input mod (0: NCF, 1: Decoder, 2: DSSM): '))
-    submod = int(input('please input sub mod: '))
-    iter = int(input('please input last iter: '))
-    if task == 0:
-        if mod == 0:
-            NCF.train(small_path, dataset, iter_start=iter, mod=submod)
-        elif mod == 1:
-            SimpleModelDecoder.train(small_path, dataset, iter_start=iter, mod=submod)
-        elif mod == 2:
-            DSSM.train(small_path, dataset, iter_start=iter, mod=submod)
-    else:
-        if mod == 0:
-            NCF.test(small_path, dataset, iter_start=iter, mod=submod)
-        elif mod == 1:
-            SimpleModelDecoder.test(small_path, dataset, iter_start=iter, mod=submod)
-        elif mod == 2:
-            DSSM.test(small_path, dataset, iter_start=iter, mod=submod)
+    # dataset = '4sq'
+    # # dir = 0
+    # # task = 0
+    # # mod = 1
+    # # submod = 0
+    # # iter = 0
+    # dir = int(input('please dir (0: small, 1: medium, 2: large): '))
+    # if dir == 0:
+    #     small_path = root_path + 'small/'
+    # elif dir == 1:
+    #     small_path = root_path + 'medium/'
+    # else:
+    #     small_path = root_path + 'large/'
+    #
+    # task = int(input('please input task (0: train, 1: test, 2: baselines): '))
+    # mod = int(input(
+    #     'please input mod (0: NCF, 1: Decoder, 2: DSSM): '))
+    # submod = int(input('please input sub mod: '))
+    # iter = int(input('please input last iter: '))
+    # if task == 0:
+    #     if mod == 0:
+    #         NCF.train(small_path, dataset, iter_start=iter, mod=submod)
+    #     elif mod == 1:
+    #         SimpleModelDecoder.train(small_path, dataset, iter_start=iter, mod=submod)
+    #     elif mod == 2:
+    #         DSSM.train(small_path, dataset, iter_start=iter, mod=submod)
+    # else:
+    #     if mod == 0:
+    #         NCF.test(small_path, dataset, iter_start=iter, mod=submod)
+    #     elif mod == 1:
+    #         SimpleModelDecoder.test(small_path, dataset, iter_start=iter, mod=submod)
+    #     elif mod == 2:
+    #         DSSM.test(small_path, dataset, iter_start=iter, mod=submod)

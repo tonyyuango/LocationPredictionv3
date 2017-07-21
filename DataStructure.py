@@ -17,7 +17,7 @@ class DataLoader(object):
         self.uid_records = {}
         self.nu = 0
         self.nv = 0
-        self.nt = 24 * 7
+        self.nt = 24 * 2
         self.nw = 0
         self.nr = 0
         self.vid_coor = {}
