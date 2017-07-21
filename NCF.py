@@ -146,12 +146,12 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
             records_u = dl.uid_records[uid]
             optimizer.zero_grad()
             predicted_probs, _, _ = model(records_u, is_train=True, mod=mod)
-            print 'predicted_probs: ', predicted_probs
+            # print 'predicted_probs: ', predicted_probs
             loss = criterion(predicted_probs)
             loss.backward()
             print_loss_total += loss.data[0]
             optimizer.step()
-            if idx % 50 == 0:
+            if idx % 100 == 0:
                 print 'uid: \t%d\tloss: %f' % (idx, print_loss_total)
         print iter, print_loss_total
         if iter % 5 == 0:
@@ -183,7 +183,7 @@ def test(root_path, dataset, iter_start=0, mod=0):
                             hits[1] += 1
                         if j < 10:
                             hits[2] += 1
-            if (uid + 1) % 10 == 0:
+            if (uid + 1) % 100 == 0:
                 print (uid + 1), hits / cnt
         hits /= cnt
         print 'iter:', iter, 'hits: ', hits, 'cnt: ', cnt
