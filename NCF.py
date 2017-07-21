@@ -56,7 +56,7 @@ class SpatioTemporalModelNCF(nn.Module):
         for rid, record in enumerate(records_al):
             if record.is_first:
                 hidden_short = self.init_hidden()
-            record.peek()
+            # record.peek()
             vids_visited.add(record.vid)
             emb_v = self.embedder_v(Variable(torch.LongTensor([record.vid])).view(1, -1)).view(1, -1)
             emb_t = self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1)
