@@ -142,7 +142,7 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
     dl = pickle.load(open(root_path + 'dl_' + dataset + '.pk', 'rb'))
     model = SpatioTemporalModel(dl.nu, dl.nv, dl.nt, sampling_list=dl.sampling_list, vid_coor_rad=dl.vid_coor_rad, vid_pop=dl.vid_pop)
     if iter_start != 0:
-        model.load_state_dict(torch.load(root_path + 'model_simple_' + str(mod) + '_' + str(iter_start) + '.md'))
+        model.load_state_dict(torch.load(root_path + 'model_dssm_' + str(mod) + '_' + str(iter_start) + '.md'))
     optimizer = optim.Adam(model.parameters())
     criterion = DSSMLoss()
     uids = dl.uid_records.keys()
@@ -161,7 +161,7 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
                 print 'uid: \t%d\tloss: %f' % (idx, print_loss_total)
         print iter, print_loss_total
         if iter % 5 == 0:
-            torch.save(model.state_dict(), root_path + 'model_simple_' + str(mod) + '_' + str(iter) + '.md')
+            torch.save(model.state_dict(), root_path + 'model_dssm_' + str(mod) + '_' + str(iter) + '.md')
 
 def test(root_path, dataset, iter_start=0, mod=0):
     torch.manual_seed(0)
@@ -172,7 +172,7 @@ def test(root_path, dataset, iter_start=0, mod=0):
         model = SpatioTemporalModel(dl.nu, dl.nv, dl.nt, sampling_list=dl.sampling_list, vid_coor_rad=dl.vid_coor_rad, vid_pop=dl.vid_pop)
         if iter_start != 0:
             model.load_state_dict(
-                torch.load(root_path + 'model_simple_' + str(mod) + '_' + str(iter) + '.md'))
+                torch.load(root_path + 'model_dssm_' + str(mod) + '_' + str(iter) + '.md'))
         hits = np.zeros(3)
         cnt = 0
         for uid, records_u in dl.uid_records.items():
