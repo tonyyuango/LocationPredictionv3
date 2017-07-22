@@ -13,7 +13,7 @@ from sklearn.neighbors import BallTree
 
 
 class SpatioTemporalModelNCF(nn.Module):
-    def __init__(self, u_size, v_size, t_size, emb_dim_u=64, emb_dim_v=64, emb_dim_t=32, hidden_dim=64, nb_cnt=100, sampling_list=None, vid_coor_rad=None, vid_pop=None, dropout=0.5):
+    def __init__(self, u_size, v_size, t_size, emb_dim_u=32, emb_dim_v=32, emb_dim_t=16, hidden_dim=32, nb_cnt=100, sampling_list=None, vid_coor_rad=None, vid_pop=None, dropout=0.5):
         super(SpatioTemporalModelNCF, self).__init__()
         self.emb_dim_u = emb_dim_u
         self.emb_dim_v = emb_dim_v
@@ -37,6 +37,7 @@ class SpatioTemporalModelNCF(nn.Module):
         self.rnn_long = nn.GRUCell(self.emb_dim_v, self.hidden_dim)
         self.embedder_u = nn.Embedding(self.u_size, self.emb_dim_u)
         self.embedder_v = nn.Embedding(self.v_size, self.emb_dim_v)
+        self.embedder_v_context = nn.Embedding(self.v_size, self.hidden_dim)
         self.embedder_t = nn.Embedding(self.t_size, self.emb_dim_t)
         dim_merged = self.hidden_dim * 2 + self.emb_dim_u + self.emb_dim_t + self.emb_dim_v
         self.ff1 = nn.Linear(dim_merged, dim_merged / 2)
@@ -56,30 +57,30 @@ class SpatioTemporalModelNCF(nn.Module):
         for rid, record in enumerate(records_al):
             if record.is_first:
                 hidden_short = self.init_hidden()
-            # record.peek()
             vids_visited.add(record.vid)
             emb_v = self.embedder_v(Variable(torch.LongTensor([record.vid])).view(1, -1)).view(1, -1)
-            emb_t = self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1)
-            emb_t_next = self.embedder_t(Variable(torch.LongTensor([record.tid_next])).view(1, -1)).view(1, -1)
             hidden_long = self.rnn_long(emb_v, hidden_long)
             hidden_short = self.rnn_short(emb_v, hidden_short)
-            if record.is_last or record.is_first:
+            if record.is_last:
                 continue
+            emb_t_next = self.embedder_t(Variable(torch.LongTensor([record.tid_next])).view(1, -1)).view(1, -1)
             hidden = torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1), emb_t_next.view(1, -1)), 1)
             if is_train:
                 rid_vids_true.append(record.vid_next)
-                vid_candidates = self.get_vids_candidate(records_u.uid, rid, record.vid_next, vids_visited, True, False)
+                vid_candidates = self.get_vids_candidate(records_u.uid, rid, record.vid_next, vids_visited, True,
+                                                         False if mod == 0 else True)
                 scores = Variable(torch.zeros(1, self.nb_cnt + 1))
             else:
                 if rid >= records_u.test_idx:
                     rid_vids_true.append(record.vid_next)
-                    vid_candidates = self.get_vids_candidate(records_u.uid, rid, record.vid_next, vids_visited, False, False)
+                    vid_candidates = self.get_vids_candidate(records_u.uid, rid, record.vid_next, vids_visited, False,
+                                                             False if mod == 0 else True)
                     scores = Variable(torch.zeros(1, self.v_size))
                     predicted_scores.append([])
                 else:
                     continue
             for vid_idx, vid_candidate in enumerate(vid_candidates):
-                emb_v_context = self.embedder_v(Variable(torch.LongTensor([vid_candidate])).view(1, -1)).view(-1, 1)
+                emb_v_context = self.embedder_v_context(Variable(torch.LongTensor([vid_candidate])).view(1, -1)).view(-1, 1)
                 input_vec = torch.cat((hidden.view(1, -1), emb_v_context.view(1, -1)), 1)
                 output_1 = F.relu(self.ff1(input_vec))
                 output_2 = F.relu(self.ff2(output_1))
@@ -146,7 +147,6 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
             records_u = dl.uid_records[uid]
             optimizer.zero_grad()
             predicted_probs, _, _ = model(records_u, is_train=True, mod=mod)
-            # print 'predicted_probs: ', predicted_probs
             loss = criterion(predicted_probs)
             loss.backward()
             print_loss_total += loss.data[0]
@@ -162,7 +162,6 @@ def test(root_path, dataset, iter_start=0, mod=0):
     random.seed(0)
     dl = pickle.load(open(root_path + 'dl_' + dataset + '.pk', 'rb'))
     for iter in range(iter_start, 0, -5):
-        # print root_path + 'model_simple_' + str(mod) + '_' + str(iter) + '.md'
         model = SpatioTemporalModelNCF(dl.nu, dl.nv, dl.nt, sampling_list=dl.sampling_list, vid_coor_rad=dl.vid_coor_rad, vid_pop=dl.vid_pop)
         if iter_start != 0:
             model.load_state_dict(

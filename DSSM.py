@@ -13,7 +13,7 @@ from sklearn.neighbors import BallTree
 
 
 class SpatioTemporalModel(nn.Module):
-    def __init__(self, u_size, v_size, t_size, emb_dim_u=64, emb_dim_v=64, emb_dim_t=32, hidden_dim=64, nb_cnt=100, sampling_list=None, vid_coor_rad=None, vid_pop=None, dropout=0.5):
+    def __init__(self, u_size, v_size, t_size, emb_dim_u=32, emb_dim_v=32, emb_dim_t=16, hidden_dim=32, nb_cnt=100, sampling_list=None, vid_coor_rad=None, vid_pop=None, dropout=0.5):
         super(SpatioTemporalModel, self).__init__()
         self.emb_dim_u = emb_dim_u
         self.emb_dim_v = emb_dim_v
@@ -37,15 +37,10 @@ class SpatioTemporalModel(nn.Module):
         self.rnn_long = nn.GRUCell(self.emb_dim_v, self.hidden_dim)
         self.embedder_u = nn.Embedding(self.u_size, self.emb_dim_u)
         self.embedder_v = nn.Embedding(self.v_size, self.emb_dim_v)
-        # self.embedder_v_context = nn.Embedding(self.v_size, self.hidden_dim)
         self.embedder_t = nn.Embedding(self.t_size, self.emb_dim_t)
-        # dim_merged = self.hidden_dim * 2 + self.emb_dim_u + self.emb_dim_t * 2 + self.emb_dim_v
-        # self.ff1 = nn.Linear(dim_merged, dim_merged / 2)
-        # self.ff2 = nn.Linear(dim_merged / 2, 1)
         self.embedder_v_context = nn.Embedding(self.v_size, self.hidden_dim * 2 + self.emb_dim_u + self.emb_dim_t)
 
     def forward(self, records_u, is_train, mod=0):
-        # predicted_scores = Variable(torch.zeros(records_u.get_predicting_records_cnt(mod=0), self.nb_cnt + 1)) if is_train else []
         predicted_scores = Variable(torch.zeros(records_u.get_predicting_records_cnt(mod=0), 1)) if is_train else []
         rid_vids_true = []
         rid_vids = []
@@ -60,14 +55,12 @@ class SpatioTemporalModel(nn.Module):
                 hidden_short = self.init_hidden()
             vids_visited.add(record.vid)
             emb_v = self.embedder_v(Variable(torch.LongTensor([record.vid])).view(1, -1)).view(1, -1)
-            emb_t = self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1)
             emb_t_next = self.embedder_t(Variable(torch.LongTensor([record.tid_next])).view(1, -1)).view(1, -1)
             hidden_long = self.rnn_long(emb_v, hidden_long)
             hidden_short = self.rnn_short(emb_v, hidden_short)
-            if record.is_last or record.is_first:
+            if record.is_last:
                 continue
 
-            # hidden = torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1), emb_t.view(1, -1), emb_t_next.view(1, -1)), 1)
             hidden = torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1), emb_t_next.view(1, -1)), 1)
             if is_train:
                 rid_vids_true.append(record.vid_next)
@@ -83,15 +76,7 @@ class SpatioTemporalModel(nn.Module):
                     continue
             for vid_idx, vid_candidate in enumerate(vid_candidates):
                 emb_v_context = self.embedder_v_context(Variable(torch.LongTensor([vid_candidate])).view(1, -1)).view(-1, 1)
-                # print hidden.size(), emb_v_context.size()
                 scores[0, vid_idx] = torch.mm(hidden, emb_v_context)
-                # print scores[0, vid_idx].size()
-                # raw_input()
-                # input_vec = torch.cat((hidden.view(1, -1), emb_v_context.view(1, -1)), 1)
-                # output_1 = F.relu(self.ff1(input_vec))
-                # output_2 = F.sigmoid(self.ff2(output_1)) # TODO check try matrix op
-                # scores[0, vid_idx] = output_2[0, 0]
-            # predicted_scores[idx] = scores
             predicted_scores[idx] = F.softmax(scores)[0, 0] if is_train else F.softmax(scores)
             rid_vids.append(vid_candidates)
             idx += 1
