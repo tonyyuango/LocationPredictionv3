@@ -33,8 +33,8 @@ class SpatioTemporalModel(nn.Module):
         for uid in range(0, u_size):
             self.uid_rid_sampling_info[uid] = {}
 
-        self.rnn_short = nn.RNNCell(self.emb_dim_v, self.hidden_dim) #TODO check GRU
-        # self.rnn_short = nn.GRUCell(self.emb_dim_v, self.hidden_dim) #TODO check GRU
+        # self.rnn_short = nn.RNNCell(self.emb_dim_v, self.hidden_dim) #TODO check GRU
+        self.rnn_short = nn.GRUCell(self.emb_dim_v, self.hidden_dim) #TODO check GRU
         self.rnn_long = nn.GRUCell(self.emb_dim_v, self.hidden_dim)
         self.embedder_u = nn.Embedding(self.u_size, self.emb_dim_u)
         self.embedder_v = nn.Embedding(self.v_size, self.emb_dim_v)
@@ -53,15 +53,16 @@ class SpatioTemporalModel(nn.Module):
         hidden_long = self.init_hidden()
         idx = 0
         for rid, record in enumerate(records_al):
+            # record.peek()
             if record.is_first:
                 hidden_short = self.init_hidden()
             vids_visited.add(record.vid)
             emb_v = self.embedder_v(Variable(torch.LongTensor([record.vid])).view(1, -1)).view(1, -1)
-            emb_t_next = self.embedder_t(Variable(torch.LongTensor([record.tid_next])).view(1, -1)).view(1, -1)
             hidden_long = self.rnn_long(emb_v, hidden_long)
             hidden_short = self.rnn_short(emb_v, hidden_short)
             if record.is_last:
                 continue
+            emb_t_next = self.embedder_t(Variable(torch.LongTensor([record.tid_next])).view(1, -1)).view(1, -1)
 
             hidden = torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1), emb_t_next.view(1, -1)), 1)
             if is_train:
@@ -78,6 +79,12 @@ class SpatioTemporalModel(nn.Module):
             predicted_scores[idx] = F.sigmoid(output) if is_train else F.softmax(output)
             rid_vids.append(vid_candidates)
             idx += 1
+        # print 'predicted_scores: ', predicted_scores
+        # raw_input("wait")
+        # print 'rid_vids: ', rid_vids
+        # raw_input("wait")
+        # print 'rid_vids_true: ', rid_vids_true
+        # raw_input("wait")
         return predicted_scores, rid_vids, rid_vids_true
 
     def get_vids_candidate(self, uid, rid, vid_true=None, vids_visited=None, is_train=True, use_distance=True):

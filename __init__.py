@@ -6,16 +6,20 @@ from DataStructure import DataLoader
 import DSSM
 import SimpleModelDecoder
 import NCF
+import TimeAwareModel
 
 def prepare_data(root_path, small_path=None, u_cnt_max = -1, task=0):
+    if task == -1:
+        fp.read_checkins('/Users/quanyuan/Dropbox/Research/Spatial/checkins.csv', '/Users/quanyuan/Dropbox/Research/Spatial/venues.csv', '/Users/quanyuan/Dropbox/Research/Spatial/loc-foursquare_totalCheckins.txt')
     if task == 0:
-        for data_set in ['gowalla', 'brightkite']:
+        for data_set in ['foursquare', 'gowalla', 'brightkite']:
+            # find records of frequent users in NYC
             fp.process_raw_file(root_path + 'loc-' + data_set + '_totalCheckins.txt', root_path + data_set + '_total.txt',
-                                u_freq_min=5, u_vcnt_min=5, lat_min=40.4774, lat_max=40.9176, lng_min=-74.2589,
+                                u_freq_min=10, v_freq_min=15 if data_set == 'foursquare' else 5, lat_min=40.4774, lat_max=40.9176, lng_min=-74.2589,
                                 lng_max=-73.7004)
             fp.generate_session_file(root_path + data_set + '_total.txt', root_path + data_set + '_session.txt')
     if task == 1:
-        for data_set in ['gowalla', 'brightkite']:
+        for data_set in ['foursquare', 'gowalla', 'brightkite']:
             dl = DataLoader(hour_gap=6)
             dl.add_records(root_path + data_set + '_session.txt', small_path + 'dl_' + data_set + '.pk', u_cnt_max)
             f = open(root_path + 'blacklist_' + data_set + '.txt', 'w', -1)
@@ -26,7 +30,7 @@ def prepare_data(root_path, small_path=None, u_cnt_max = -1, task=0):
                     f.write(dl.uid_u[uid] + '\n')
             f.close()
     if task == 2:
-        for data_set in ['gowalla', 'brightkite']:
+        for data_set in ['foursquare', 'gowalla', 'brightkite']:
             blacklist = set()
             f = open(root_path + 'blacklist_' + data_set + '.txt', 'r', -1)
             for l in f:
@@ -52,12 +56,13 @@ if __name__ == "__main__":
     root_path = '/Users/quanyuan/Dropbox/Research/LocationPrediction/' \
         if os.path.exists('/Users/quanyuan/Dropbox/Research/LocationPrediction/') \
         else '/shared/data/qyuan/LocationPrediction/'
+    # prepare_data(root_path, root_path + 'small/', task=-1)
     # prepare_data(root_path, root_path + 'small/', task=0)
     # prepare_data(root_path, root_path + 'small/', task=1)
-    # prepare_data(root_path, root_path + 'small/', u_cnt_max=300, task=2)
+    # prepare_data(root_path, root_path + 'small/', u_cnt_max=500, task=2)
     # prepare_data(root_path, root_path + 'full/', u_cnt_max=-1, task=2)
     # raw_input()
-    dataset = 'gowalla'
+    dataset = 'foursquare'
     dir = 0
     task = 0
     mod = 0

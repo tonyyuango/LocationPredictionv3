@@ -39,7 +39,7 @@ class DataLoader(object):
             if u not in self.u_uid:
                 if u_cnt_max > 0 and len(self.u_uid) >= u_cnt_max:
                     break
-                print u, self.nu
+                # print u, self.nu
                 self.u_uid[u] = self.nu
                 self.uid_u[self.nu] = u
                 self.uid_records[self.nu] = UserRecords(self.nu)
