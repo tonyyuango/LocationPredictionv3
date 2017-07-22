@@ -31,7 +31,7 @@ class SpatioTemporalModel(nn.Module):
         self.dist_metric = DistanceMetric.get_metric('haversine')
         self.uid_rid_sampling_info = {}
         for uid in range(0, u_size):
-            self.uid_rid_sampling_info[uid] = []
+            self.uid_rid_sampling_info[uid] = {}
 
         self.rnn_short = nn.RNNCell(self.emb_dim_v, self.hidden_dim) #TODO check GRU
         self.rnn_long = nn.GRUCell(self.emb_dim_v, self.hidden_dim)

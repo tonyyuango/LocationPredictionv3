@@ -59,10 +59,10 @@ if __name__ == "__main__":
     # raw_input()
     dataset = 'gowalla'
     dir = 0
-    # task = 0
-    # mod = 2
-    # submod = 0
-    # iter = 0
+    task = 0
+    mod = 0
+    submod = 1
+    iter = 0
     # dir = int(input('please dir (0: small, 1: full): '))
     if dir == 0:
         small_path = root_path + 'small/'
