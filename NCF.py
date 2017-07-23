@@ -82,7 +82,10 @@ class SpatioTemporalModelNCF(nn.Module):
                 else:
                     continue
             for vid_idx, vid_candidate in enumerate(vid_candidates):
-                emb_v_context = self.embedder_v_context(Variable(torch.LongTensor([vid_candidate])).view(1, -1)).view(-1, 1)
+                emb_v_context = \
+                    self.embedder_v_context(Variable(torch.LongTensor([vid_candidate])).view(1, -1)).view(-1, 1) \
+                        if mod != 2 else \
+                        self.embedder_v(Variable(torch.LongTensor([vid_candidate])).view(1, -1)).view(-1, 1)
                 input_vec = torch.cat((hidden.view(1, -1), emb_v_context.view(1, -1)), 1)
                 output_1 = F.relu(self.ff1(input_vec))
                 output_2 = F.relu(self.ff2(output_1))
