@@ -33,8 +33,8 @@ class SpatioTemporalModel(nn.Module):
         for uid in range(0, u_size):
             self.uid_rid_sampling_info[uid] = {}
 
-        self.rnn_short = nn.RNNCell(self.emb_dim_v, self.hidden_dim) #TODO check GRU
-        # self.rnn_short = nn.GRUCell(self.emb_dim_v, self.hidden_dim) #TODO check GRU
+        # self.rnn_short = nn.RNNCell(self.emb_dim_v, self.hidden_dim) #TODO check GRU
+        self.rnn_short = nn.GRUCell(self.emb_dim_v, self.hidden_dim) #TODO check GRU
         self.rnn_long = nn.GRUCell(self.emb_dim_v, self.hidden_dim)
         self.embedder_u = nn.Embedding(self.u_size, self.emb_dim_u)
         self.embedder_v = nn.Embedding(self.v_size, self.emb_dim_v)

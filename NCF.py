@@ -70,13 +70,15 @@ class SpatioTemporalModelNCF(nn.Module):
                 vid_candidates = self.get_vids_candidate(records_u.uid, rid, record.vid_next, vids_visited, True,
                                                          False if mod == 0 else True)
                 scores = Variable(torch.zeros(1, self.nb_cnt + 1))
+                rid_vids.append(vid_candidates)
             else:
                 if rid >= records_u.test_idx:
                     rid_vids_true.append(record.vid_next)
                     vid_candidates = self.get_vids_candidate(records_u.uid, rid, record.vid_next, vids_visited, False,
                                                              False if mod == 0 else True)
-                    scores = Variable(torch.zeros(1, self.v_size))
+                    scores = Variable(torch.zeros(1, self.size if mod == 0 else len(vid_candidates)))
                     predicted_scores.append([])
+                    rid_vids.append(vid_candidates)
                 else:
                     continue
             for vid_idx, vid_candidate in enumerate(vid_candidates):
@@ -87,7 +89,6 @@ class SpatioTemporalModelNCF(nn.Module):
                 output_3 = F.sigmoid(self.ff3(output_2)) # TODO check try matrix op
                 scores[0, vid_idx] = output_3[0, 0]
             predicted_scores[idx] = scores
-            rid_vids.append(vid_candidates)
             idx += 1
         return predicted_scores, rid_vids, rid_vids_true
 
@@ -169,9 +170,17 @@ def test(root_path, dataset, iter_start=0, mod=0):
         hits = np.zeros(3)
         cnt = 0
         for uid, records_u in dl.uid_records.items():
-            id_scores, id_vids, vids_true = model(records_u, is_train=False, mod=1)
+            id_scores, id_vids, vids_true = model(records_u, is_train=False, mod=mod)
+            # print 'id_scores: ', id_scores
+            # print 'id_vids: ', id_vids
+            # print 'vids_true: ', vids_true
             for idx in range(len(id_vids)):
                 probs_sorted, vid_sorted = torch.sort(id_scores[idx].view(-1), 0, descending=True)
+                # print '\tprobs_sorted: ', probs_sorted
+                # print '\tvid_sorted: ', vid_sorted
+                # print 'id_vids[idx], ', len(id_vids[idx]), id_vids[idx]
+                # for id in vid_sorted.data:
+                #     print '\t\t', id, id_vids[idx][id]
                 vid_ranked = [id_vids[idx][id] for id in vid_sorted.data]
                 cnt += 1
                 for j in range(10):
@@ -182,7 +191,7 @@ def test(root_path, dataset, iter_start=0, mod=0):
                             hits[1] += 1
                         if j < 10:
                             hits[2] += 1
-            if (uid + 1) % 100 == 0:
+            if (uid + 1) % 10 == 0:
                 print (uid + 1), hits / cnt
         hits /= cnt
         print 'iter:', iter, 'hits: ', hits, 'cnt: ', cnt
