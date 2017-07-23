@@ -6,6 +6,7 @@ from DataStructure import DataLoader
 import DSSM
 import SimpleModelDecoder
 import NCF
+import pickle
 import TimeAwareModel
 
 def prepare_data(root_path, small_path=None, u_cnt_max = -1, task=0):
@@ -48,7 +49,9 @@ def prepare_data(root_path, small_path=None, u_cnt_max = -1, task=0):
         #         else:
         #             print "test"
 
-
+def dl_convert(root_path, dataset):
+    dl = pickle.load(open(root_path + 'dl_' + dataset + '.pk', 'rb'))
+    dl.write_to_files(root_path, dataset)
 
 if __name__ == "__main__":
     torch.set_num_threads(2)
@@ -64,15 +67,16 @@ if __name__ == "__main__":
     # raw_input()
     dataset = 'foursquare'
     dir = 0
-    task = 0
-    mod = 0
-    submod = 1
-    iter = 0
-    # dir = int(input('please dir (0: small, 1: full): '))
+    # task = 0
+    # mod = 0
+    # submod = 1
+    # iter = 0
+    # # dir = int(input('please dir (0: small, 1: full): '))
     if dir == 0:
         small_path = root_path + 'small/'
     elif dir == 1:
         small_path = root_path + 'full/'
+    # dl_convert(small_path, dataset)
     task = int(input('please input task (0: train, 1: test, 2: baselines): '))
     mod = int(input(
         'please input mod (0: NCF, 1: Decoder, 2: DSSM): '))

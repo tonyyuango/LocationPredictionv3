@@ -186,7 +186,7 @@ def test(root_path, dataset, iter_start=0, mod=0):
                 #     print '\t\t', id, id_vids[idx][id]
                 vid_ranked = [id_vids[idx][id] for id in vid_sorted.data]
                 cnt += 1
-                for j in range(10):
+                for j in range(min(len(vid_ranked), 10)):
                     if vids_true[idx] == vid_ranked[j]:
                         if j == 0:
                             hits[0] += 1

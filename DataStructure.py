@@ -80,6 +80,59 @@ class DataLoader(object):
     def show_info(self):
         print 'U: ', self.nu, 'V: ', self.nv, 'R: ', self.nr, 'T: ', self.nt
 
+    def write_to_files(self, root_path, dataset):
+        f_coor_rad = open(root_path + dataset + "_coor_rad.txt", 'w')
+        f_coor = open(root_path + dataset + "_coor.txt", 'w')
+        f_train = open(root_path + dataset + "_train.txt", 'w')
+        f_test = open(root_path + dataset + "_test.txt", 'w')
+        for uid, records_u in self.uid_records.items():
+            # f_train.write(str(uid) + '\n')
+            # f_test.write(str(uid) + '\n')
+            vids = [[], []]
+            tids = [[], []]
+            vids_next = [[], []]
+            tids_next = [[], []]
+            session_idx = [[], []]
+            for rid, record in enumerate(records_u.records):
+                if uid == 0:
+                    record.peek()
+                role_id = 0 if rid < records_u.test_idx else 1
+                if record.is_first:
+                    idx_start = rid if rid < records_u.test_idx else rid - records_u.test_idx
+                    session_idx[role_id].append(idx_start)
+                if record.is_last:
+                    idx_end = rid if rid < records_u.test_idx else rid - records_u.test_idx
+                    session_idx[role_id].append(idx_end)
+                vids[role_id].append(record.vid)
+                tids[role_id].append(record.tid)
+                vids_next[role_id].append(record.vid_next)
+                tids_next[role_id].append(record.tid_next)
+            f_train.write(','.join([str(idx) for idx in session_idx[0]]) + '\n')
+            f_test.write(','.join([str(idx) for idx in session_idx[1]]) + '\n')
+            f_train.write(','.join([str(vid) for vid in vids[0]]) + '\n')
+            f_test.write(','.join([str(vid) for vid in vids[1]]) + '\n')
+            f_train.write(','.join([str(tid) for tid in tids[0]]) + '\n')
+            f_test.write(','.join([str(tid) for tid in tids[1]]) + '\n')
+            f_train.write(','.join([str(vid) for vid in vids_next[0]]) + '\n')
+            f_test.write(','.join([str(vid) for vid in vids_next[1]]) + '\n')
+            f_train.write(','.join([str(tid) for tid in tids_next[0]]) + '\n')
+            f_test.write(','.join([str(tid) for tid in tids_next[1]]) + '\n')
+        for vid in range(self.nv):
+            f_coor.write(','.join([str(coor) for coor in self.vid_coor[vid]]) + '\n')
+            f_coor_rad.write(','.join([str(coor) for coor in self.vid_coor_rad[vid]]) + '\n')
+        f_train.close()
+        f_test.close()
+        f_coor.close()
+        f_coor_rad.close()
+        f_u = open(root_path + dataset + "_u.txt", 'w')
+        f_v = open(root_path + dataset + "_v.txt", 'w')
+        for u in self.u_uid:
+            f_u.write(u + ',' + str(self.u_uid[u]) + '\n')
+        for v in self.v_vid:
+            f_v.write(v + ',' + str(self.v_vid[v]) + '\n')
+        f_u.close()
+        f_v.close()
+
 class Record(object):
     def __init__(self, dt, uid, vid, vid_next=-1, tid_next = -1, is_first=False, is_last=False):
         self.dt = dt
