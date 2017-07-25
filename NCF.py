@@ -198,3 +198,4 @@ def test(root_path, dataset, iter_start=0, mod=0):
                 print (uid + 1), hits / cnt
         hits /= cnt
         print 'iter:', iter, 'hits: ', hits, 'cnt: ', cnt
+        raw_input("wait")
