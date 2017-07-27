@@ -77,7 +77,7 @@ if __name__ == "__main__":
     dir = 0
     task = 0
     mod = 1
-    submod = 1
+    submod = 2
     iter = 0
     # dir = int(input('please dir (0: small, 1: full): '))
     if dir == 0:
@@ -85,11 +85,11 @@ if __name__ == "__main__":
     elif dir == 1:
         small_path = root_path + 'full/'
     # # dl_convert(small_path, dataset)
-    # task = int(input('please input task (0: train, 1: test, 2: baselines): '))
+    task = int(input('please input task (0: train, 1: test, 2: baselines): '))
     # mod = int(input(
     #     'please input mod (0: NCF, 1: Decoder, 2: DSSM): '))
     submod = int(input('please input sub mod: '))
-    # iter = int(input('please input last iter: '))
+    iter = int(input('please input last iter: '))
     if task == 0:
         if mod == 0:
             NCF.train(small_path, dataset, iter_start=iter, mod=submod)
