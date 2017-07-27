@@ -37,9 +37,10 @@ class SpatioTemporalModel(nn.Module):
         self.embedder_v = nn.Embedding(self.v_size, self.emb_dim_v)
         self.embedder_t = nn.Embedding(self.t_size, self.emb_dim_t)
         # self.embedder_t.weight = nn.Parameter(0.001 * torch.randn(self.embedder_t.weight.size()))
-        dim_merged = self.hidden_dim * 2 + self.emb_dim_u + self.emb_dim_t
+        dim_merged = self.hidden_dim * 2 + self.emb_dim_u + self.emb_dim_t if mod != -1 else self.hidden_dim * 2 + self.emb_dim_u
         self.decoder = IndexLinear(dim_merged, v_size)
-        if mod == 2:
+        self.mod = mod
+        if self.mod == 2:
             self.vid_band = {}
             for vid in xrange(self.v_size):
                 dists, ids = self.tree.query([self.vid_coor_rad[vid]], 11)
@@ -57,8 +58,9 @@ class SpatioTemporalModel(nn.Module):
         vids_visited = set([record.vid for record in records_u.get_records(mod=0)])
         records_al = records_u.get_records(mod=0) if is_train else records_u.get_records(mod=2)
         emb_t_al = Variable(torch.zeros(len(records_al), self.emb_dim_t))
-        for id, record in enumerate(records_al):
-            emb_t_al[id] = self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1)
+        if mod != -1:
+            for id, record in enumerate(records_al):
+                emb_t_al[id] = self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1)
         emb_u = self.embedder_u(Variable(torch.LongTensor([records_u.uid])).view(1, -1)).view(1, -1)
         hidden_long = self.init_hidden()
         idx = 0
@@ -74,14 +76,14 @@ class SpatioTemporalModel(nn.Module):
                 continue
             # emb_t_next = self.embedder_t(Variable(torch.LongTensor([record.tid_next])).view(1, -1)).view(1, -1)
             emb_t_next = emb_t_al[id + 1]
-            hidden = torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1), emb_t_next.view(1, -1)), 1)
+            hidden = torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1), emb_t_next.view(1, -1)), 1) if self.mod != -1 else torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1)), 1)
             if is_train:
                 id_vids_true.append(record.vid_next)
-                vid_candidates = self.get_vids_candidate(record.rid, record.vid_next, vids_visited, True, False if mod == 0 else True)
+                vid_candidates = self.get_vids_candidate(record.rid, record.vid_next, vids_visited, True, False if mod <= 0 else True)
             else:
                 if id >= records_u.test_idx:
                     id_vids_true.append(record.vid_next)
-                    vid_candidates = self.get_vids_candidate(record.rid, record.vid_next, vids_visited, False, False if mod == 0 else True)
+                    vid_candidates = self.get_vids_candidate(record.rid, record.vid_next, vids_visited, False, False if mod <= 0 else True)
                     predicted_scores.append([])
                 else:
                     continue
@@ -188,7 +190,10 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
         for idx, uid in enumerate(uids):
             records_u = dl.uid_records[uid]
             optimizer.zero_grad()
-            predicted_probs, _, _ = model(records_u, is_train=True, mod=(1 if iter < 100 else mod))
+            if mod == 2:
+                predicted_probs, _, _ = model(records_u, is_train=True, mod=(1 if iter < 100 else mod))
+            else:
+                predicted_probs, _, _ = model(records_u, is_train=True, mod=mod)
             loss = criterion(predicted_probs)
             loss.backward()
             print_loss_total += loss.data[0]
