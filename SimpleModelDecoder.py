@@ -58,6 +58,7 @@ class SpatioTemporalModel(nn.Module):
         vids_visited = set([record.vid for record in records_u.get_records(mod=0)])
         records_al = records_u.get_records(mod=0) if is_train else records_u.get_records(mod=2)
         emb_t_al = Variable(torch.zeros(len(records_al), self.emb_dim_t))
+        
         if mod != -1:
             for id, record in enumerate(records_al):
                 emb_t_al[id] = self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1)
