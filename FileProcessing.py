@@ -18,12 +18,12 @@ def generate_session_file(file_path, save_path, hour_gap=6):
         dt = datetime.datetime.strptime(al[1].strip('"'), '%Y-%m-%dT%H:%M:%SZ')
         if u != u_pre:
             # print u_pre, len(u_session)
-            if len(u_session) >= 2:
+            if len(u_session) >= 3:
                 session_valid_cnt = 0
                 for session in u_session:
                     if len(session) >= 2:
                         session_valid_cnt += 1
-                if session_valid_cnt >= 2:
+                if session_valid_cnt >= 3:
                     for session in u_session:
                         for l in session:
                             fw.write(l + '\n')
@@ -40,27 +40,34 @@ def generate_session_file(file_path, save_path, hour_gap=6):
         u_pre = u
         dt_pre = dt
     u_session.append(session)
-    if len(u_session) >= 2:
+    if len(u_session) >= 3:
         session_valid_cnt = 0
         for session in u_session:
             if len(session) >= 2:
                 session_valid_cnt += 1
-        if session_valid_cnt >= 2:
+        if session_valid_cnt >= 3:
             for session in u_session:
                 for l in session:
                     fw.write(l + '\n')
     fr.close()
     fw.close()
 
-def process_raw_file(file_path, save_path, u_freq_min=10, v_freq_min = 10, u_vcnt_min=0, lat_min=-180, lat_max=-180, lng_min=180, lng_max=180):
+def process_raw_file(file_path, save_path, u_freq_min=10, v_freq_min = 10, u_vcnt_min=0, lat_min=-180, lat_max=180, lng_min=-180, lng_max=180):
     u_freq = {}
     v_freq = {}
     f = open(file_path, 'r', -1)
     for line in f:
         al = line.strip().split('\t')
         u = al[0]
-        v = al[4]
         u_freq[u] = 1 if u not in u_freq else u_freq[u] + 1
+    f.close()
+    f = open(file_path, 'r', -1)
+    for line in f:
+        al = line.strip().split('\t')
+        u = al[0]
+        v = al[4]
+        if u_freq[u] < u_freq_min:
+            continue
         v_freq[v] = 1 if v not in v_freq else v_freq[v] + 1
     f.close()
     u_set = set()
@@ -79,22 +86,18 @@ def process_raw_file(file_path, save_path, u_freq_min=10, v_freq_min = 10, u_vcn
             continue
         if u_freq[u] < u_freq_min or v_freq[v] < v_freq_min:
             continue
+        v_set.add(v)
         if u == u_pre:
             lines.append(line)
-            v_set.add(v)
         else:
             u_set.add(u)
-            if len(v_set) >= u_vcnt_min:
-                for l in lines[::-1] if file_path.find('foursquare') == -1 else lines:
-                    fw.write(l)
-            v_set = set()
-            v_set.add(v)
+            for l in lines[::-1] if file_path.find('foursquare') == -1 else lines:
+                fw.write(l)
             lines = [line]
             u_pre = u
     u_set.add(u)
-    if len(v_set) >= u_vcnt_min:
-        for l in lines[::-1]:
-            fw.write(l)
+    for l in lines[::-1] if file_path.find('foursquare') == -1 else lines:
+        fw.write(l)
     fr.close()
     fw.close()
     print 'U: ', len(u_set)

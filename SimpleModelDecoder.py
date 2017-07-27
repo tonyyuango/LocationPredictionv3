@@ -29,12 +29,8 @@ class SpatioTemporalModel(nn.Module):
         self.vid_pop = vid_pop
         self.tree = BallTree(vid_coor_rad.values(), leaf_size=40, metric='haversine')
         self.dist_metric = DistanceMetric.get_metric('haversine')
-        self.uid_rid_sampling_info = {}
-        for uid in range(0, u_size):
-            self.uid_rid_sampling_info[uid] = {}
-
-        self.rnn_short = nn.RNNCell(self.emb_dim_v, self.hidden_dim) #TODO check GRU
-        # self.rnn_short = nn.GRUCell(self.emb_dim_v, self.hidden_dim) #TODO check GRU
+        self.rid_sampling_info = {}
+        self.rnn_short = nn.RNNCell(self.emb_dim_v, self.hidden_dim)
         self.rnn_long = nn.GRUCell(self.emb_dim_v, self.hidden_dim)
         self.embedder_u = nn.Embedding(self.u_size, self.emb_dim_u)
         self.embedder_v = nn.Embedding(self.v_size, self.emb_dim_v)
@@ -43,16 +39,18 @@ class SpatioTemporalModel(nn.Module):
         self.decoder = IndexLinear(dim_merged, v_size)
 
     def forward(self, records_u, is_train, mod=0):
+        records_u.summarize()
+        print records_u.uid, records_u.test_idx
+        print records_u.get_predicting_records_cnt(mod=0)
         predicted_scores = Variable(torch.zeros(records_u.get_predicting_records_cnt(mod=0), self.nb_cnt + 1)) if is_train else []
-        rid_vids_true = []
-        rid_vids = []
-        vids_visited = set()
-
+        id_vids_true = []
+        id_vids = []
+        vids_visited = set([record.vid for record in records_u.get_records(mod=0)])
         records_al = records_u.get_records(mod=0) if is_train else records_u.get_records(mod=2)
         emb_u = self.embedder_u(Variable(torch.LongTensor([records_u.uid])).view(1, -1)).view(1, -1)
         hidden_long = self.init_hidden()
         idx = 0
-        for rid, record in enumerate(records_al):
+        for id, record in enumerate(records_al):
             # record.peek()
             if record.is_first:
                 hidden_short = self.init_hidden()
@@ -66,26 +64,20 @@ class SpatioTemporalModel(nn.Module):
 
             hidden = torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1), emb_t_next.view(1, -1)), 1)
             if is_train:
-                rid_vids_true.append(record.vid_next)
-                vid_candidates = self.get_vids_candidate(records_u.uid, rid, record.vid_next, vids_visited, True, False if mod == 0 else True)
+                id_vids_true.append(record.vid_next)
+                vid_candidates = self.get_vids_candidate(records_u.uid, record.rid, record.vid_next, vids_visited, True, False if mod == 0 else True)
             else:
-                if rid >= records_u.test_idx:
-                    rid_vids_true.append(record.vid_next)
-                    vid_candidates = self.get_vids_candidate(records_u.uid, rid, record.vid_next, vids_visited, False, False if mod == 0 else True)
+                if id >= records_u.test_idx:
+                    id_vids_true.append(record.vid_next)
+                    vid_candidates = self.get_vids_candidate(records_u.uid, record.rid, record.vid_next, vids_visited, False, False if mod == 0 else True)
                     predicted_scores.append([])
                 else:
                     continue
             output = self.decoder(hidden, Variable(torch.LongTensor(vid_candidates)).view(1, -1))
             predicted_scores[idx] = F.sigmoid(output) if is_train else F.softmax(output)
-            rid_vids.append(vid_candidates)
+            id_vids.append(vid_candidates)
             idx += 1
-        # print 'predicted_scores: ', predicted_scores
-        # raw_input("wait")
-        # print 'rid_vids: ', rid_vids
-        # raw_input("wait")
-        # print 'rid_vids_true: ', rid_vids_true
-        # raw_input("wait")
-        return predicted_scores, rid_vids, rid_vids_true
+        return predicted_scores, id_vids, id_vids_true
 
     def get_vids_candidate(self, uid, rid, vid_true=None, vids_visited=None, is_train=True, use_distance=True):
         if not use_distance:
@@ -99,8 +91,8 @@ class SpatioTemporalModel(nn.Module):
             else:
                 return range(self.v_size)
         else:
-            if rid in self.uid_rid_sampling_info[uid]:
-                vids, probs = self.uid_rid_sampling_info[uid][rid]
+            if rid in self.rid_sampling_info:
+                vids, probs = self.rid_sampling_info[rid]
             else:
                 nbs = set()
                 for vid_visited in vids_visited:
@@ -111,7 +103,7 @@ class SpatioTemporalModel(nn.Module):
                 vids = list(nbs)
                 probs = np.array([self.vid_pop[vid] for vid in vids], dtype=np.float64)
                 probs /= probs.sum()
-                self.uid_rid_sampling_info[uid][rid] = (vids, probs)
+                self.rid_sampling_info[rid] = (vids, probs)
             if is_train:
                 id_cnt = np.random.multinomial(self.nb_cnt, probs)
                 vid_candidates = [vid_true]
@@ -143,6 +135,7 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
             records_u = dl.uid_records[uid]
             optimizer.zero_grad()
             predicted_probs, _, _ = model(records_u, is_train=True, mod=mod)
+            print predicted_probs
             loss = criterion(predicted_probs)
             loss.backward()
             print_loss_total += loss.data[0]

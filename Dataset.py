@@ -9,19 +9,28 @@ from torch.utils.data import Dataset, DataLoader
 
 class CheckinData(Dataset):
     def __init__(self, data_path):
+        self.uid_vids_long = []
+        self.uid_vids_short = []
+        self.uid_tids = []
+        self.uid_vids_next = []
+        self.uid_tids_next = []
         f_data = open(data_path, 'r')
         lines = f_data.readlines()
         f_data.close()
         #
-        uid_session_idx_tmp = [map(int, lines[i].split(',')) for i in range(0, len(lines), 5)]
-        self.uid_session_idx = []
-        for session_u in uid_session_idx_tmp:
-            self.uid_session_idx.append([(session_u[i], session_u[i + 1]) for i in range(0, len(session_u), 2)])
-        # self.uid_session_idx = [map(int, lines[i].split(',')) for i in range(0, len(lines), 5)]
-        self.uid_vids = [map(int, lines[i].split(',')) for i in range(1, len(lines), 5)]
-        self.uid_tids = [map(int, lines[i].split(',')) for i in range(2, len(lines), 5)]
-        self.uid_vids_next = [map(int, lines[i].split(',')) for i in range(3, len(lines), 5)]
-        self.uid_tids_next = [map(int, lines[i].split(',')) for i in range(4, len(lines), 5)]
+        for i in xrange(len(lines)):
+            uid, cnt = map(int, lines[i].split(','))
+            i += 1
+            self.uid_vids_long.append(map(int, lines[i].split(',')))
+            vids_short = []
+            for j in xrange(cnt):
+                vids_short.append(map[int, lines[j].split(',')])
+            i += j
+            self.uid_tids.append(map(int, lines[i].split(',')))
+            i += 1
+            self.uid_vids_next.append(map(int, lines[i].split(',')))
+            i += 1
+            self.uid_tids_next.append(map(int, lines[i].split(',')))
         self.max_seq_len, self.max_session_len = self.get_max_seq_len()
 
     def to_string(self):

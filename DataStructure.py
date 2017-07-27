@@ -4,8 +4,8 @@ import numpy as np
 import pickle
 import math
 hour_gap = 6
+valid_portion = 0.1
 test_portion = 0.2
-test_session_len_min = 2
 
 class DataLoader(object):
     def __init__(self, hour_gap=6):
@@ -24,6 +24,10 @@ class DataLoader(object):
         self.vid_coor_nor_rectified = {}
         self.vid_pop = {}
         self.sampling_list = []
+
+    def summarize(self):
+        for uid, record_u in self.uid_records.items():
+            record_u.summarize()
 
     def add_records(self, file_path, dl_save_path, u_cnt_max=-1, blacklist=None):
         f = open(file_path, 'r', -1)
@@ -54,7 +58,7 @@ class DataLoader(object):
             vid = self.v_vid[v]
             self.sampling_list.append(vid)
             self.vid_pop[vid] += 1
-            self.uid_records[uid].add_record(dt, uid, vid)
+            self.uid_records[uid].add_record(dt, uid, vid, self.nr)
             self.nr += 1
         f.close()
 
@@ -86,31 +90,30 @@ class DataLoader(object):
         f_train = open(root_path + dataset + "_train.txt", 'w')
         f_test = open(root_path + dataset + "_test.txt", 'w')
         for uid, records_u in self.uid_records.items():
-            # f_train.write(str(uid) + '\n')
-            # f_test.write(str(uid) + '\n')
-            vids = [[], []]
+            vids_long = [[], []]
+            vids_short = [[], []]
             tids = [[], []]
             vids_next = [[], []]
             tids_next = [[], []]
-            session_idx = [[], []]
             for rid, record in enumerate(records_u.records):
-                if uid == 0:
-                    record.peek()
                 role_id = 0 if rid < records_u.test_idx else 1
                 if record.is_first:
-                    idx_start = rid if rid < records_u.test_idx else rid - records_u.test_idx
-                    session_idx[role_id].append(idx_start)
+                    vids_session = []
                 if record.is_last:
-                    idx_end = rid if rid < records_u.test_idx else rid - records_u.test_idx
-                    session_idx[role_id].append(idx_end)
-                vids[role_id].append(record.vid)
+                    vids_short[role_id].append(vids_session)
+                    vids_session = []
+                vids_long[role_id].append(record.vid)
                 tids[role_id].append(record.tid)
                 vids_next[role_id].append(record.vid_next)
                 tids_next[role_id].append(record.tid_next)
-            f_train.write(','.join([str(idx) for idx in session_idx[0]]) + '\n')
-            f_test.write(','.join([str(idx) for idx in session_idx[1]]) + '\n')
-            f_train.write(','.join([str(vid) for vid in vids[0]]) + '\n')
-            f_test.write(','.join([str(vid) for vid in vids[1]]) + '\n')
+            f_train.write(str(uid) + ',' + len(vids_short[0]))
+            f_test.write(str(uid) + ',' + len(vids_short[1]))
+            f_train.write(','.join([str(vid) for vid in vids_long[0]]) + '\n')
+            f_test.write(','.join([str(vid) for vid in vids_long[1]]) + '\n')
+            for vids_session in vids_short[0]:
+                f_train.write(','.join([str(vid) for vid in vids_session]) + '\n')
+            for vids_session in vids_short[1]:
+                f_test.write(','.join([str(vid) for vid in vids_session]) + '\n')
             f_train.write(','.join([str(tid) for tid in tids[0]]) + '\n')
             f_test.write(','.join([str(tid) for tid in tids[1]]) + '\n')
             f_train.write(','.join([str(vid) for vid in vids_next[0]]) + '\n')
@@ -134,8 +137,9 @@ class DataLoader(object):
         f_v.close()
 
 class Record(object):
-    def __init__(self, dt, uid, vid, vid_next=-1, tid_next = -1, is_first=False, is_last=False):
+    def __init__(self, dt, uid, vid, vid_next=-1, tid_next = -1, is_first=False, is_last=False, rid=None):
         self.dt = dt
+        self.rid = rid
         self.uid = uid
         self.vid = vid
         self.tid = dt.hour
@@ -151,28 +155,20 @@ class Record(object):
     def peek(self):
         print 'u: ', self.uid, '\tv: ', self.vid, '\tt: ', self.tid, '\tvid_next: ', self.vid_next, '\tis_first: ', self.is_first, '\tis_last: ', self.is_last
 
-
 class UserRecords(object):
     def __init__(self, uid):
         self.uid = uid
         self.records = []
-        self.session_cnt = 0
-        self.session_start_idx=[]
         self.dt_last = None
         self.test_idx = 0
-        self.record_cnt_train = 0
-        self.record_cnt_test = 0
 
-    def add_record(self, dt, uid, vid):
+    def add_record(self, dt, uid, vid, rid=None):
         is_first = False
         if self.dt_last is None or (dt - self.dt_last).total_seconds() / 3600.0 > hour_gap:
-            self.session_start_idx.append(len(self.records))
-            self.session_cnt += 1
-            self.test_idx = self.session_start_idx[int(self.session_cnt * (1 - test_portion))]
             is_first = True
             if len(self.records) > 0:
                 self.records[len(self.records) - 1].is_last = True
-        record = Record(dt, uid, vid, is_first=is_first, is_last=True)
+        record = Record(dt, uid, vid, is_first=is_first, is_last=True, rid=rid)
         if len(self.records) > 0:
             self.records[len(self.records) - 1].vid_next = record.vid
             self.records[len(self.records) - 1].tid_next = record.tid
@@ -182,6 +178,34 @@ class UserRecords(object):
                 self.records[len(self.records) - 1].vid_next = -1
         self.records.append(record)
         self.dt_last = dt
+        self.is_valid = True
+
+    def summarize(self):
+        session_begin_idxs = []
+        session_len = 0
+        session_begin_idx = 0
+        for rid, record in enumerate(self.records):
+            if record.is_first:
+                session_begin_idx = rid
+            session_len += 1
+            if record.is_last:
+                if session_len >= 2:
+                    session_begin_idxs.append(session_begin_idx)
+                session_len = 0
+        if len(session_begin_idxs) < 2:
+            self.is_valid = False
+            return
+        test_session_idx = int(len(session_begin_idxs) * (1 - test_portion))
+        if test_session_idx == 0:
+            test_session_idx = 1
+        if test_session_idx < len(session_begin_idxs):
+            self.test_idx = session_begin_idxs[test_session_idx]
+        else:
+            self.is_valid = False
+
+
+    def valid(self):
+        return self.is_valid
 
     def get_records(self, mod=0):
         if mod == 0:  # train only
@@ -205,3 +229,57 @@ class UserRecords(object):
                     continue
                 cnt += 1
             return cnt
+
+# class UserRecords(object):
+#     def __init__(self, uid):
+#         self.uid = uid
+#         self.records = []
+#         self.session_cnt = 0
+#         self.session_start_idx=[]
+#         self.dt_last = None
+#         self.test_idx = 0
+#         self.record_cnt_train = 0
+#         self.record_cnt_test = 0
+#
+#     def add_record(self, dt, uid, vid):
+#         is_first = False
+#         if self.dt_last is None or (dt - self.dt_last).total_seconds() / 3600.0 > hour_gap:
+#             self.session_start_idx.append(len(self.records))
+#             self.session_cnt += 1
+#             self.test_idx = self.session_start_idx[int(self.session_cnt * (1 - test_portion))]
+#             is_first = True
+#             if len(self.records) > 0:
+#                 self.records[len(self.records) - 1].is_last = True
+#         record = Record(dt, uid, vid, is_first=is_first, is_last=True)
+#         if len(self.records) > 0:
+#             self.records[len(self.records) - 1].vid_next = record.vid
+#             self.records[len(self.records) - 1].tid_next = record.tid
+#             if not is_first:
+#                 self.records[len(self.records) - 1].is_last = False
+#             else:
+#                 self.records[len(self.records) - 1].vid_next = -1
+#         self.records.append(record)
+#         self.dt_last = dt
+#
+#     def get_records(self, mod=0):
+#         if mod == 0:  # train only
+#             return self.records[0: self.test_idx]
+#         elif mod == 1:  # test only
+#             return self.records[self.test_idx: len(self.records)]
+#         else:
+#             return self.records
+#
+#     def get_predicting_records_cnt(self, mod=0):
+#         cnt = 0
+#         if mod == 0:  # train only
+#             for record in self.records[0: self.test_idx]:
+#                 if record.is_last:
+#                     continue
+#                 cnt += 1
+#             return cnt
+#         else:  # test only
+#             for record in self.records[self.test_idx: len(self.records)]:
+#                 if record.is_last:
+#                     continue
+#                 cnt += 1
+#             return cnt
