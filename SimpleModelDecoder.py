@@ -45,6 +45,14 @@ class SpatioTemporalModel(nn.Module):
             for vid in xrange(self.v_size):
                 dists, ids = self.tree.query([self.vid_coor_rad[vid]], 11)
                 self.vid_band[vid] = dists[0, 10]
+                print dists[0, 10] * 6371 * 1000
+            self.kde_coef = 1.0 / math.sqrt(2 * math.pi)
+            self.embedder_gap_time = nn.Embedding(12, 3)
+            self.merger = nn.Linear(3, 1)
+        if self.mod == 3:
+            self.vid_band = {}
+            for vid in xrange(self.v_size):
+                self.vid_band[vid] = 0.000172657
             self.kde_coef = 1.0 / math.sqrt(2 * math.pi)
             self.embedder_gap_time = nn.Embedding(12, 3)
             self.merger = nn.Linear(3, 1)
@@ -89,7 +97,7 @@ class SpatioTemporalModel(nn.Module):
                 else:
                     continue
             output_seq = self.decoder(hidden, Variable(torch.LongTensor(vid_candidates)).view(1, -1))
-            if mod == 2:
+            if mod in {2, 3}:
                 gap_time = int((records_al[id + 1].dt - record.dt).total_seconds() / 60 / 30)
                 emb_gap_time = self.embedder_gap_time(Variable(torch.LongTensor([gap_time])).view(1, -1)).view(1, -1)
                 output_dis = Variable(torch.zeros(len(vid_candidates), 2))
@@ -193,7 +201,7 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
         for idx, uid in enumerate(uids):
             records_u = dl.uid_records[uid]
             optimizer.zero_grad()
-            if mod == 2:
+            if mod in {2, 3}:
                 predicted_probs, _, _ = model(records_u, is_train=True, mod=(1 if iter < 100 else mod))
             else:
                 predicted_probs, _, _ = model(records_u, is_train=True, mod=mod)
