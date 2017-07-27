@@ -58,7 +58,7 @@ class SpatioTemporalModel(nn.Module):
         vids_visited = set([record.vid for record in records_u.get_records(mod=0)])
         records_al = records_u.get_records(mod=0) if is_train else records_u.get_records(mod=2)
         emb_t_al = Variable(torch.zeros(len(records_al), self.emb_dim_t))
-        
+
         if mod != -1:
             for id, record in enumerate(records_al):
                 emb_t_al[id] = self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1)
@@ -185,6 +185,8 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
     optimizer = optim.Adam(model.parameters())
     criterion = NSNLLLoss()
     uids = dl.uid_records.keys()
+    if mod == -1:
+        n_iter = 200
     for iter in range(iter_start + 1, n_iter + 1):
         print_loss_total = 0
         random.shuffle(uids)
