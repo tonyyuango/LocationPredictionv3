@@ -40,8 +40,6 @@ class SpatioTemporalModel(nn.Module):
 
     def forward(self, records_u, is_train, mod=0):
         records_u.summarize()
-        print records_u.uid, records_u.test_idx
-        print records_u.get_predicting_records_cnt(mod=0)
         predicted_scores = Variable(torch.zeros(records_u.get_predicting_records_cnt(mod=0), self.nb_cnt + 1)) if is_train else []
         id_vids_true = []
         id_vids = []
@@ -135,7 +133,6 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
             records_u = dl.uid_records[uid]
             optimizer.zero_grad()
             predicted_probs, _, _ = model(records_u, is_train=True, mod=mod)
-            print predicted_probs
             loss = criterion(predicted_probs)
             loss.backward()
             print_loss_total += loss.data[0]
