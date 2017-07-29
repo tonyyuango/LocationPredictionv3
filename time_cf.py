@@ -14,7 +14,7 @@ from sklearn.neighbors import KDTree
 from Util import IndexLinear
 
 class TimeAwareCF(nn.Module):
-    def __init__(self, v_size, t_size, emb_dim_t=16, distance_threshold=0.07, vid_coor_nor=None, vid_pop=None, nb_cnt=20, adapt_bandwidth=False, bandwidth_global=0.07, adapt_nn=5):
+    def __init__(self, v_size, t_size, emb_dim_t=16, distance_threshold=0.07, vid_coor_nor=None, vid_pop=None, nb_cnt=15, adapt_bandwidth=False, bandwidth_global=0.07, adapt_nn=5):
         super(TimeAwareCF, self).__init__()
         self.v_size = v_size
         self.t_size = t_size
