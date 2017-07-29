@@ -52,7 +52,7 @@ class SpatioTemporalModel(nn.Module):
         if self.mod == 3:
             self.vid_band = {}
             for vid in xrange(self.v_size):
-                self.vid_band[vid] = 0.000172657
+                self.vid_band[vid] = 0.000172657 / 2
             self.kde_coef = 1.0 / math.sqrt(2 * math.pi)
             self.embedder_gap_time = nn.Embedding(12, 3)
             self.merger = nn.Linear(3, 1)
@@ -88,16 +88,27 @@ class SpatioTemporalModel(nn.Module):
             hidden = torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1), emb_t_next.view(1, -1)), 1) if self.mod != -1 else torch.cat((hidden_long.view(1, -1), hidden_short.view(1, -1), emb_u.view(1, -1)), 1)
             if is_train:
                 id_vids_true.append(record.vid_next)
-                vid_candidates = self.get_vids_candidate(record.rid, record.vid_next, vids_visited, True, False if mod <= 0 else True)
+                if mod == 3:
+                    vid_candidates = self.get_vids_candidate_map(record.rid, record.vid_next, vids_visited, True, False if mod <= 0 else True)
+                else:
+                    vid_candidates = self.get_vids_candidate(record.rid, record.vid_next, vids_visited, True, False if mod <= 0 else True)
             else:
                 if id >= records_u.test_idx:
                     id_vids_true.append(record.vid_next)
-                    vid_candidates = self.get_vids_candidate(record.rid, record.vid_next, vids_visited, False, False if mod <= 0 else True)
+                    if mod == 3:
+                        vid_candidates = self.get_vids_candidate_map(record.rid, record.vid_next, vids_visited, False,
+                                                                     False if mod <= 0 else True)
+                    else:
+                        vid_candidates = self.get_vids_candidate(record.rid, record.vid_next, vids_visited, False, False if mod <= 0 else True)
                     predicted_scores.append([])
                 else:
                     continue
-            output_seq = self.decoder(hidden, Variable(torch.LongTensor(vid_candidates)).view(1, -1))
-            if mod in {2, 3}:
+            if mod != 3:
+                output_seq = self.decoder(hidden, Variable(torch.LongTensor(vid_candidates)).view(1, -1))
+            else:
+                # print vid_candidates, len(vid_candidates)
+                output_seq = self.decoder(hidden, Variable(torch.LongTensor(vid_candidates.keys())).view(1, -1))
+            if mod == 2:
                 gap_time = int((records_al[id + 1].dt - record.dt).total_seconds() / 60 / 30)
                 emb_gap_time = self.embedder_gap_time(Variable(torch.LongTensor([gap_time])).view(1, -1)).view(1, -1)
                 output_dis = Variable(torch.zeros(len(vid_candidates), 2))
@@ -108,11 +119,58 @@ class SpatioTemporalModel(nn.Module):
                 input = torch.t(input)
                 output = torch.mm(emb_gap_time, input).view(1, -1)
                 predicted_scores[idx] = F.sigmoid(output) if is_train else F.softmax(output)
+            elif mod == 3:
+                gap_time = int((records_al[id + 1].dt - record.dt).total_seconds() / 60 / 30)
+                emb_gap_time = self.embedder_gap_time(Variable(torch.LongTensor([gap_time])).view(1, -1)).view(1, -1)
+                output_dis = Variable(torch.zeros(len(vid_candidates), 2))
+                for i, vid_candidate in enumerate(vid_candidates.keys()):
+                    output_dis[i, 0] = self.get_ked_score_pre(records_al, id, vid_candidate, emb_t_al, vid_candidates[vid_candidate])
+                    output_dis[i, 1] = self.get_kde_score_all(records_al, id, vid_candidate, emb_t_al, vid_candidates[vid_candidate])
+                # print output_dis
+                # print output_seq.view(-1, 1)
+                input = torch.cat((output_seq.view(-1, 1), output_dis), 1)
+                input = torch.t(input)
+                # print input
+                # print emb_gap_time
+                output = torch.mm(emb_gap_time, input).view(1, -1)
+                predicted_scores[idx] = F.sigmoid(output) if is_train else F.softmax(output)
             else:
                 predicted_scores[idx] = F.sigmoid(output_seq) if is_train else F.softmax(output_seq)
             id_vids.append(vid_candidates)
             idx += 1
         return predicted_scores, id_vids, id_vids_true
+
+    def get_vids_candidate_map(self, rid, vid_true=None, vids_visited=None, is_train=True, use_distance=True):
+        if rid in self.rid_sampling_info:
+            nbs_map, vids_al, probs = self.rid_sampling_info[rid]
+        else:
+            nbs_map = {}
+            for vid_visited in vids_visited:
+                vids = self.tree.query_radius([self.vid_coor_rad[vid_visited]], r=0.000172657)
+                for vid in vids[0]:
+                    if (not is_train) or (is_train and vid != vid_true):
+                        if vid not in nbs_map:
+                            nbs_map[vid] = set()
+                        nbs_map[vid].add(vid_visited)
+            vids_al = sorted(nbs_map.keys())
+            probs = np.array([self.vid_pop[vid] for vid in vids_al], dtype=np.float64)
+            probs /= probs.sum()
+            self.rid_sampling_info[rid] = (nbs_map, vids_al, probs)
+        if is_train:
+            vid_candidates = {}
+            vid_candidates[vid_true] = None
+            while len(vid_candidates) < self.nb_cnt:
+                id_cnt = np.random.multinomial(self.nb_cnt, probs)
+                for id, cnt in enumerate(id_cnt):
+                    if vids_al[id] == vid_true:
+                        continue
+                    for _ in range(cnt):
+                        vid_candidates[vids_al[id]] = nbs_map[vids_al[id]]
+
+            # print vid_candidates
+            return vid_candidates
+        else:
+            return nbs_map
 
     def get_vids_candidate(self, rid, vid_true=None, vids_visited=None, is_train=True, use_distance=True):
         if not use_distance:
@@ -159,19 +217,22 @@ class SpatioTemporalModel(nn.Module):
         result = float(result)
         return result
 
-    def get_ked_score_pre(self, records_al, id, vid_cand, emb_t_al):
+    def get_ked_score_pre(self, records_al, id, vid_cand, emb_t_al, nbs):
         score = self.kde(records_al[id].vid, vid_cand)
         emb_t_pre = emb_t_al[id].view(1, -1)
         emb_t_cur = emb_t_al[id + 1].view(-1, 1)
         weight = torch.mm(emb_t_pre, emb_t_cur)
         return score * weight
 
-    def get_kde_score_all(self, records_al, id, vid_cand, emb_t_al):
+    def get_kde_score_all(self, records_al, id, vid_cand, emb_t_al, nbs):
+        # print nbs
         emb_t_cur = emb_t_al[id + 1].view(-1, 1)
         score_sum = Variable(torch.zeros([1]))
         weight_sum = Variable(torch.zeros([1]))
         for id_r, record in enumerate(records_al):
             if id_r == id + 1:
+                continue
+            if nbs is not None and record.vid not in nbs:
                 continue
             score = self.kde(record.vid, vid_cand)
             # print score
@@ -201,7 +262,7 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
         for idx, uid in enumerate(uids):
             records_u = dl.uid_records[uid]
             optimizer.zero_grad()
-            if mod in {2, 3}:
+            if mod in {2}:
                 predicted_probs, _, _ = model(records_u, is_train=True, mod=(1 if iter < 100 else mod))
             else:
                 predicted_probs, _, _ = model(records_u, is_train=True, mod=mod)

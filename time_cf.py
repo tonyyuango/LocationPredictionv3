@@ -149,7 +149,7 @@ def train(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07, adapt
                 print 'uid: \t%d\tloss: %f' % (idx, print_loss_total)
         print iter, print_loss_total
         if iter % 5 == 0:
-            torch.save(model.state_dict(), root_path + 'model_tcf_' + str(adapt_bandwidth) + '_' +str(bandwidth_global) + '_' + str(nn) + '_' + str(iter) + '.md')
+            torch.save(model.state_dict(), root_path + 'model_tcf_' + str(adapt_bandwidth) + '_' +str(bandwidth_global) + '_' + str(adapt_nn) + '_' + str(iter) + '.md')
 
 def test(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07, adapt_nn=5, iter_start=0):
     torch.manual_seed(0)
@@ -159,7 +159,7 @@ def test(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07, adapt_
     for _, records_u in dl.uid_records.items():
         records_u.summarize()
     if iter_start != 0:
-        model.load_state_dict(torch.load(root_path + 'model_tcf_' + str(adapt_bandwidth) + '_' +str(bandwidth_global) + '_' + str(nn) + '_' + str(iter_start) + '.md'))
+        model.load_state_dict(torch.load(root_path + 'model_tcf_' + str(adapt_bandwidth) + '_' +str(bandwidth_global) + '_' + str(adapt_nn) + '_' + str(iter_start) + '.md'))
     hits = np.zeros(3)
     cnt = 0
     for uid, records_u in dl.uid_records.items():
