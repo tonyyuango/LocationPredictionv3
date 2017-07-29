@@ -252,5 +252,5 @@ def test_direct(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07,
 root_path = '/shared/data/qyuan/LocationData/small/'
 dataset = 'foursquare'
 adapt_nn = int(input('please input adapt nn: '))
-# train(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07, adapt_nn=5)
-test_direct(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07, adapt_nn=5)
+# train(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07, adapt_nn=adapt_nn)
+test_direct(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07, adapt_nn=adapt_nn)
