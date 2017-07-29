@@ -250,8 +250,8 @@ def test_direct(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07,
             print (uid + 1), hits / cnt
         hits /= cnt
     print 'hits: ', hits, 'cnt: ', cnt
-root_path = '/Users/quanyuan/Dropbox/Research/LocationData/small/'
-# root_path = '/shared/data/qyuan/LocationData/small/'
+# root_path = '/Users/quanyuan/Dropbox/Research/LocationData/small/'
+root_path = '/shared/data/qyuan/LocationData/small/'
 dataset = 'foursquare'
 adapt_nn = 5
 # adapt_nn = int(input('please input adapt nn: '))
