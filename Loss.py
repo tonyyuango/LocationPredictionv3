@@ -17,8 +17,8 @@ class NSNLLLoss(nn.Module):
     def forward(self, probs, size_average=True):
         probs = probs.clamp(min=1e-4, max=1.0 - 1e-4)
         loss = torch.sum(torch.log(probs[:, 0])) + torch.sum(torch.log(1 - probs[:, 1:]))
-        if size_average:
-            loss /= probs.size(0)
+        # if size_average:
+        #     loss /= probs.size(0)
         return loss.neg()
 
 # class NSNLLLoss(nn.Module):
