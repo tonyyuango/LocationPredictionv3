@@ -244,7 +244,7 @@ def test_direct(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07,
                         hits[1] += 1
                     if j < 10:
                         hits[2] += 1
-        if (uid + 1) % 1 == 0:
+        if (uid + 1) % 10 == 0:
             print (uid + 1), hits / cnt
         hits /= cnt
     print 'hits: ', hits, 'cnt: ', cnt
