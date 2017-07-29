@@ -30,6 +30,8 @@ class TimeAwareCF(nn.Module):
         self.rid_sampling_info = {}
         self.vid_band = {}
         self.adapt_bandwidth(adapt_bandwidth, adapt_nn)
+        # print self.vid_band
+        # raw_input()
 
     def adapt_bandwidth(self, adapt_bandwidth, adapt_nn):
         if not adapt_bandwidth:
@@ -248,9 +250,11 @@ def test_direct(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07,
             print (uid + 1), hits / cnt
         hits /= cnt
     print 'hits: ', hits, 'cnt: ', cnt
-# root_path = '/Users/quanyuan/Dropbox/Research/LocationData/small/'
-root_path = '/shared/data/qyuan/LocationData/small/'
+root_path = '/Users/quanyuan/Dropbox/Research/LocationData/small/'
+# root_path = '/shared/data/qyuan/LocationData/small/'
 dataset = 'foursquare'
-adapt_nn = int(input('please input adapt nn: '))
+adapt_nn = 5
+# adapt_nn = int(input('please input adapt nn: '))
+bandwidth_global = float(input('please input bandwidth global: '))
 # train(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07, adapt_nn=adapt_nn)
-test_direct(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07, adapt_nn=adapt_nn)
+test_direct(root_path, dataset, adapt_bandwidth=False, bandwidth_global=bandwidth_global, adapt_nn=adapt_nn)
