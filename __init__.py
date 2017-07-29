@@ -7,7 +7,7 @@ import DSSM
 import SimpleModelDecoder
 import NCF
 import pickle
-import TimeAwareModel
+import time_cf
 
 def prepare_data(root_path, small_path=None, u_cnt_max = -1, task=0):
     print 'task: ', task
@@ -86,9 +86,11 @@ if __name__ == "__main__":
         small_path = root_path + 'full/'
     # # dl_convert(small_path, dataset)
     task = int(input('please input task (0: train, 1: test, 2: baselines): '))
-    # mod = int(input(
-    #     'please input mod (0: NCF, 1: Decoder, 2: DSSM): '))
-    submod = int(input('please input sub mod: '))
+    mod = int(input(
+        'please input mod (0: NCF, 1: Decoder, 2: DSSM, 3: TimeAwareCF): '))
+    # submod = int(input('please input sub mod: '))
+    if mod == 3:
+        adapt_nn = int(input('please input adapt nn: '))
     iter = int(input('please input last iter: '))
     if task == 0:
         if mod == 0:
@@ -97,6 +99,8 @@ if __name__ == "__main__":
             SimpleModelDecoder.train(small_path, dataset, iter_start=iter, mod=submod)
         elif mod == 2:
             DSSM.train(small_path, dataset, iter_start=iter, mod=submod)
+        elif mod == 3:
+            time_cf.train(small_path, dataset, iter_start=iter, adapt_bandwidth=True, bandwidth_global=0.07, adapt_nn=adapt_nn)
     else:
         if mod == 0:
             NCF.test(small_path, dataset, iter_start=iter, mod=submod)
@@ -104,3 +108,5 @@ if __name__ == "__main__":
             SimpleModelDecoder.test(small_path, dataset, iter_start=iter, mod=submod)
         elif mod == 2:
             DSSM.test(small_path, dataset, iter_start=iter, mod=submod)
+        elif mod == 3:
+            time_cf.test(small_path, dataset, iter_start=iter, adapt_bandwidth=True, bandwidth_global=0.07, adapt_nn=adapt_nn)

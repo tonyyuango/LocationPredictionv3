@@ -153,7 +153,7 @@ class Record(object):
 
 
     def peek(self):
-        print 'u: ', self.uid, '\tv: ', self.vid, '\tt: ', self.tid, '\tvid_next: ', self.vid_next, '\tis_first: ', self.is_first, '\tis_last: ', self.is_last
+        print 'u: ', self.uid, '\tv: ', self.vid, '\tt: ', self.tid, '\tvid_next: ', self.vid_next, '\tis_first: ', self.is_first, '\tis_last: ', self.is_last, 'dt: ', self.dt, 'rid: ', self.rid
 
 class UserRecords(object):
     def __init__(self, uid):
