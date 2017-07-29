@@ -181,6 +181,8 @@ def test(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07, adapt_
         hits /= cnt
     print 'hits: ', hits, 'cnt: ', cnt
 
-root_path = '/Users/quanyuan/Dropbox/Research/LocationData/small/'
+# root_path = '/Users/quanyuan/Dropbox/Research/LocationData/small/'
+root_path = '/shared/data/qyuan/LocationData/small/'
 dataset = 'foursquare'
+adapt_nn = int(input('please input adapt nn: '))
 train(root_path, dataset, adapt_bandwidth=True, bandwidth_global=0.07, adapt_nn=5)
