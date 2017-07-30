@@ -42,14 +42,18 @@ class AttentionModel(nn.Module):
         self.decoder_u = IndexLinear(self.emb_dim_u, v_size)
         if self.mod == 0:
             self.merger = nn.Linear(4, 1)   # seq, t, u, dis --> score
+            # print self.merger.weight
+            # print self.merger.bias
         elif self.mod == 1:
-            self.merger = nn.Linear(5, 1)
+            self.merger = nn.Linear(5, 1)  # TODO bias = 0
         elif self.mod == 2:
             self.merger_al = []
             for _ in xrange(6):
                 self.merger_al.append(nn.Linear(5, 1))
         self.att_dim = self.emb_dim_t + self.hidden_dim * 2
-        self.att_M = nn.Parameter(torch.randn(self.att_dim, self.att_dim))
+        self.att_M = nn.Parameter(torch.randn(self.att_dim, self.att_dim))  # TODO set zero
+        # print self.att_M
+        # raw_input()
 
     def forward(self, records_u, is_train):
         predicted_scores = Variable(torch.zeros(records_u.get_predicting_records_cnt(mod=0), self.nb_cnt + 1)) if is_train else []
