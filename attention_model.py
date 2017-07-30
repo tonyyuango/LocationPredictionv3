@@ -40,7 +40,14 @@ class AttentionModel(nn.Module):
         self.decoder_h = IndexLinear(self.hidden_dim * 2, v_size)
         self.decoder_t = IndexLinear(self.emb_dim_t, v_size)
         self.decoder_u = IndexLinear(self.emb_dim_u, v_size)
-        self.merger = nn.Linear(4, 1) if self.mod == 0 else nn.Linear(5, 1)    # seq, t, u, dis --> score
+        if self.mod == 0:
+            self.merger = nn.Linear(4, 1)   # seq, t, u, dis --> score
+        elif self.mod == 1:
+            self.merger = nn.Linear(5, 1)
+        elif self.mod == 2:
+            self.merger_al = []
+            for _ in xrange(6):
+                self.merger_al.append(nn.Linear(5, 1))
         self.att_dim = self.emb_dim_t + self.hidden_dim * 2
         self.att_M = nn.Parameter(torch.randn(self.att_dim, self.att_dim))
 
@@ -81,7 +88,6 @@ class AttentionModel(nn.Module):
                 hidden_short = self.rnn_short(emb_v, hidden_short)
                 hidden_long_al[idx] = hidden_long
                 hidden_short_al[idx] = hidden_short
-
             if record.is_last or (not is_train and idx < records_u.test_idx):
                 continue
             vids_visited.add(record.vid)
@@ -95,13 +101,27 @@ class AttentionModel(nn.Module):
             scores_d_all = self.get_scores_d_all(records_u, idx, vid_candidates, feature_al, is_train)
             if self.mod == 0:
                 scores_merge = torch.cat((scores_u, scores_t, scores_h, scores_d_all), 0).t()
-            else:
+                if is_train:
+                    predicted_scores[id] = F.sigmoid(self.merger(scores_merge).t())
+                else:
+                    predicted_scores.append(F.softmax(self.merger(scores_merge).t()))
+            elif self.mod == 1:
                 scores_d_pre = self.get_scores_d_pre(records_u, idx, vid_candidates, feature_al, is_train)
                 scores_merge = torch.cat((scores_u, scores_t, scores_h, scores_d_all, scores_d_pre), 0).t()
-            if is_train:
-                predicted_scores[id] = F.sigmoid(self.merger(scores_merge).t())
-            else:
-                predicted_scores.append(F.softmax(self.merger(scores_merge).t()))
+                if is_train:
+                    predicted_scores[id] = F.sigmoid(self.merger(scores_merge).t())
+                else:
+                    predicted_scores.append(F.softmax(self.merger(scores_merge).t()))
+            elif self.mod == 2:
+                scores_d_pre = self.get_scores_d_pre(records_u, idx, vid_candidates, feature_al, is_train)
+                scores_merge = torch.cat((scores_u, scores_t, scores_h, scores_d_all, scores_d_pre), 0).t()
+                gap_time = int((records_al[idx + 1].dt - record.dt).total_seconds() / 60 / 30)
+                if gap_time >= 6:
+                    gap_time = 5
+                if is_train:
+                    predicted_scores[id] = F.sigmoid(self.merger_al[gap_time](scores_merge).t())
+                else:
+                    predicted_scores.append(F.softmax(self.merger_al[gap_time](scores_merge).t()))
             id += 1
         return predicted_scores, id_vids, id_vids_true
 
