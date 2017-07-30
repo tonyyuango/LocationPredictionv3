@@ -3,7 +3,7 @@ import os
 import attention_model
 
 if __name__ == "__main__":
-    torch.set_num_threads(2)
+    torch.set_num_threads(1)
     torch.manual_seed(0)
     root_path = '/Users/quanyuan/Dropbox/Research/LocationData/' \
         if os.path.exists('/Users/quanyuan/Dropbox/Research/LocationData/') \

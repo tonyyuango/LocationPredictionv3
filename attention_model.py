@@ -231,7 +231,7 @@ def test(root_path, dataset, iter_start=0, mod=0):
         hits = np.zeros(3)
         cnt = 0
         for uid, records_u in dl.uid_records.items():
-            id_scores, id_vids, vids_true = model(records_u, is_train=False, mod=mod)
+            id_scores, id_vids, vids_true = model(records_u, is_train=False)
             for idx in range(len(id_vids)):
                 probs_sorted, vid_sorted = torch.sort(id_scores[idx].view(-1), 0, descending=True)
                 vid_ranked = [id_vids[idx][id] for id in vid_sorted.data]
@@ -244,7 +244,7 @@ def test(root_path, dataset, iter_start=0, mod=0):
                             hits[1] += 1
                         if j < 10:
                             hits[2] += 1
-            if (uid + 1) % 50 == 0:
+            if (uid + 1) % 1 == 0:
                 print (uid + 1), hits / cnt
         hits /= cnt
         print 'iter:', iter, 'hits: ', hits, 'cnt: ', cnt
