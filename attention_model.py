@@ -214,7 +214,7 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
             if idx % 50 == 0:
                 print 'uid: \t%d\tloss: %f' % (idx, print_loss_total)
         print iter, print_loss_total
-        if iter % 5 == 0:
+        if iter % 1 == 0:
             torch.save(model.state_dict(), root_path + 'model_attention_' + str(mod) + '_' + str(iter) + '.md')
 
 def test(root_path, dataset, iter_start=0, mod=0):
