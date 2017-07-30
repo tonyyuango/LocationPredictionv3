@@ -60,7 +60,7 @@ class AttentionModel(nn.Module):
             if record.is_first:
                 hidden_short = self.init_hidden()
             emb_t_al[idx] = self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1)    # current time embedding
-            feature_al[idx] = torch.cat((hidden_long, hidden_short, emb_t_al[idx].view(1, -1)), 1)  
+            feature_al[idx] = torch.cat((hidden_long, hidden_short, emb_t_al[idx].view(1, -1)), 1)
             emb_v = self.embedder_v(Variable(torch.LongTensor([record.vid])).view(1, -1)).view(1, -1)       # feature: current time + previous hiddens
             hidden_long = self.rnn_long(emb_v, hidden_long)
             hidden_short = self.rnn_short(emb_v, hidden_short)
