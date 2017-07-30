@@ -10,5 +10,5 @@ if __name__ == "__main__":
         else '/shared/data/qyuan/LocationData/'
     small_path = root_path + 'small/'
     dataset = 'foursquare'
-    mod = int(input("input mod: \n"))
+    mod = int(input("input mod: "))
     attention_model.train(small_path, dataset, mod=mod)
