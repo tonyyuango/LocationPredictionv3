@@ -11,4 +11,5 @@ if __name__ == "__main__":
     small_path = root_path + 'small/'
     dataset = 'foursquare'
     mod = int(input("input mod: "))
-    attention_model.train(small_path, dataset, mod=mod)
+    iter = int(input('please input last iter: '))
+    attention_model.train(small_path, dataset, iter_start=iter, mod=mod)
