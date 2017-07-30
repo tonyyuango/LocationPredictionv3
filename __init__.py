@@ -10,6 +10,10 @@ if __name__ == "__main__":
         else '/shared/data/qyuan/LocationData/'
     small_path = root_path + 'small/'
     dataset = 'foursquare'
+    task = int(input('please input task (0: train, 1: test, 2: baselines): '))
     mod = int(input("input mod: "))
     iter = int(input('please input last iter: '))
-    attention_model.train(small_path, dataset, iter_start=iter, mod=mod)
+    if task == 0:
+        attention_model.train(small_path, dataset, iter_start=iter, mod=mod)
+    else:
+        attention_model.test(small_path, dataset, iter_start=iter, mod=mod)
