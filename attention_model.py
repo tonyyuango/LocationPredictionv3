@@ -49,7 +49,7 @@ class AttentionModel(nn.Module):
             for _ in xrange(6):
                 self.merger_al.append(nn.Linear(5, 1, bias=False))
         self.att_dim = self.emb_dim_t + self.hidden_dim * 2
-        self.att_M = nn.Parameter(torch.randn(self.att_dim, self.att_dim))
+        self.att_M = nn.Parameter(torch.ones(self.att_dim, self.att_dim) / self.att_dim)
         for i in xrange(self.att_dim):
             for j in xrange(self.att_dim):
                 if i < self.hidden_dim and j < self.hidden_dim:
@@ -59,8 +59,7 @@ class AttentionModel(nn.Module):
                 if i >= self.hidden_dim * 2 and j > self.hidden_dim * 2:
                     continue
                 self.att_M.data[i, j] = 0.0
-        self.att_M = F.relu(self.att_M)
-
+                
     def forward(self, records_u, is_train):
         predicted_scores = Variable(torch.zeros(records_u.get_predicting_records_cnt(mod=0), self.nb_cnt + 1)) if is_train else []
         records_al = records_u.get_records(mod=0) if is_train else records_u.get_records(mod=2)
