@@ -117,19 +117,19 @@ class AttentionModel(nn.Module):
                 scores_merge = torch.cat((scores_u, scores_t, scores_h, scores_d_all), 0).t()
                 if is_train:
                     # predicted_scores[id] = F.sigmoid(self.merger(scores_merge).t())
-                    predicted_scores[id] = F.sigmoid(F.linear(scores_merge, self.merger_weight, bias=None).t())
+                    predicted_scores[id] = F.sigmoid(F.linear(scores_merge, F.relu(self.merger_weight), bias=None).t())
                 else:
                     # predicted_scores.append(F.softmax(self.merger(scores_merge).t()))
-                    predicted_scores.append(F.softmax(F.linear(scores_merge, self.merger_weight, bias=None).t()))
+                    predicted_scores.append(F.softmax(F.linear(scores_merge, F.relu(self.merger_weight), bias=None).t()))
             elif self.mod == 1:
                 scores_d_pre = self.get_scores_d_pre(records_u, idx, vid_candidates, feature_al, is_train)
                 scores_merge = torch.cat((scores_u, scores_t, scores_h, scores_d_all, scores_d_pre), 0).t()
                 if is_train:
                     # predicted_scores[id] = F.sigmoid(self.merger(scores_merge).t())
-                    predicted_scores[id] = F.sigmoid(F.linear(scores_merge, self.merger_weight, bias=None).t())
+                    predicted_scores[id] = F.sigmoid(F.linear(scores_merge, F.relu(self.merger_weight), bias=None).t())
                 else:
                     # predicted_scores.append(F.softmax(self.merger(scores_merge).t()))
-                    predicted_scores.append(F.softmax(F.linear(scores_merge, self.merger_weight, bias=None).t()))
+                    predicted_scores.append(F.softmax(F.linear(scores_merge, F.relu(self.merger_weight), bias=None).t()))
             elif self.mod == 2:
                 scores_d_pre = self.get_scores_d_pre(records_u, idx, vid_candidates, feature_al, is_train)
                 scores_merge = torch.cat((scores_u, scores_t, scores_h, scores_d_all, scores_d_pre), 0).t()
@@ -138,10 +138,10 @@ class AttentionModel(nn.Module):
                     gap_time = 5
                 if is_train:
                     # predicted_scores[id] = F.sigmoid(self.merger_al[gap_time](scores_merge).t())
-                    predicted_scores[id] = F.sigmoid(F.linear(scores_merge, self.merger_weight[gap_time].view(1, -1), bias=None).t())
+                    predicted_scores[id] = F.sigmoid(F.linear(scores_merge, F.relu(self.merger_weight[gap_time].view(1, -1)), bias=None).t())
                 else:
                     # predicted_scores.append(F.softmax(self.merger_al[gap_time](scores_merge).t()))
-                    predicted_scores.append(F.softmax(F.linear(scores_merge, self.merger_weight[gap_time].view(1, -1), bias=None).t()))
+                    predicted_scores.append(F.softmax(F.linear(scores_merge, F.relu(self.merger_weight[gap_time].view(1, -1)), bias=None).t()))
             id += 1
         return predicted_scores, id_vids, id_vids_true
 
