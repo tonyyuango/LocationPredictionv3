@@ -51,7 +51,7 @@ class AttentionModel(nn.Module):
             # self.merger_al = []
             # for _ in xrange(6):
             #     self.merger_al.append(nn.Linear(5, 1, bias=False))
-        print self.merger_weight
+        # print self.merger_weight
         self.att_dim = self.emb_dim_t + self.hidden_dim * 2
         self.att_M = nn.Parameter(torch.ones(self.att_dim, self.att_dim) / self.att_dim)
         for i in xrange(self.att_dim):
