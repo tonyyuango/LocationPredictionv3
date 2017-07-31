@@ -43,7 +43,7 @@ class AttentionModel(nn.Module):
         if self.mod == 0:
             self.merger = nn.Linear(4, 1, bias=False)   # seq, t, u, dis --> score
         elif self.mod == 1:
-            self.merger = nn.Linear(5, 1, bias=False)  
+            self.merger = nn.Linear(5, 1, bias=False)
         elif self.mod == 2:
             self.merger_al = []
             for _ in xrange(6):
@@ -59,12 +59,14 @@ class AttentionModel(nn.Module):
                 if i >= self.hidden_dim * 2 and j > self.hidden_dim * 2:
                     continue
                 self.att_M.data[i, j] = 0.0
+        self.att_M = F.relu(self.att_M)
 
     def forward(self, records_u, is_train):
         predicted_scores = Variable(torch.zeros(records_u.get_predicting_records_cnt(mod=0), self.nb_cnt + 1)) if is_train else []
         records_al = records_u.get_records(mod=0) if is_train else records_u.get_records(mod=2)
         vids_visited = set([record.vid for record in records_u.get_records(mod=0)])
         emb_u = self.embedder_u(Variable(torch.LongTensor([records_u.uid])).view(1, -1)).view(1, -1)
+        emb_u = F.relu(emb_u)
         emb_t_al = Variable(torch.zeros(len(records_al), self.emb_dim_t))
         hidden_long_al = Variable(torch.zeros(len(records_al), self.hidden_dim))
         hidden_short_al = Variable(torch.zeros(len(records_al), self.hidden_dim))
@@ -75,13 +77,13 @@ class AttentionModel(nn.Module):
         for idx, record in enumerate(records_u.get_records(mod=0)):  # can only use train data
             if record.is_first:
                 hidden_short = self.init_hidden()
-            emb_t_al[idx] = self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1)    # current time embedding
-            feature_al[idx] = torch.cat((hidden_long, hidden_short, emb_t_al[idx].view(1, -1)), 1)
+            emb_t_al[idx] = F.relu(self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1))    # current time embedding
+            feature_al[idx] = torch.cat((F.relu(hidden_long), F.relu(hidden_short), emb_t_al[idx].view(1, -1)), 1)
             emb_v = self.embedder_v(Variable(torch.LongTensor([record.vid])).view(1, -1)).view(1, -1)       # feature: current time + previous hiddens
             hidden_long = self.rnn_long(emb_v, hidden_long)
             hidden_short = self.rnn_short(emb_v, hidden_short)
-            hidden_long_al[idx] = hidden_long
-            hidden_short_al[idx] = hidden_short
+            hidden_long_al[idx] = F.relu(hidden_long)
+            hidden_short_al[idx] = F.relu(hidden_short)
 
         id = 0
         id_vids_true = []
@@ -90,13 +92,13 @@ class AttentionModel(nn.Module):
             if idx >= records_u.test_idx:  # append the states of testing records
                 if record.is_first:
                     hidden_short = self.init_hidden()
-                emb_t_al[idx] = self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1)
-                feature_al[idx] = torch.cat((hidden_long, hidden_short, emb_t_al[idx].view(1, -1)), 1)
+                emb_t_al[idx] = F.relu(self.embedder_t(Variable(torch.LongTensor([record.tid])).view(1, -1)).view(1, -1))
+                feature_al[idx] = torch.cat((F.relu(hidden_long), F.relu(hidden_short), emb_t_al[idx].view(1, -1)), 1)
                 emb_v = self.embedder_v(Variable(torch.LongTensor([record.vid])).view(1, -1)).view(1, -1)
                 hidden_long = self.rnn_long(emb_v, hidden_long)
                 hidden_short = self.rnn_short(emb_v, hidden_short)
-                hidden_long_al[idx] = hidden_long
-                hidden_short_al[idx] = hidden_short
+                hidden_long_al[idx] = F.relu(hidden_long)
+                hidden_short_al[idx] = F.relu(hidden_short)
             if record.is_last or (not is_train and idx < records_u.test_idx):
                 continue
             vids_visited.add(record.vid)
