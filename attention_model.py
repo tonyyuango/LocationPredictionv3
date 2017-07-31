@@ -41,19 +41,24 @@ class AttentionModel(nn.Module):
         self.decoder_t = IndexLinear(self.emb_dim_t, v_size)
         self.decoder_u = IndexLinear(self.emb_dim_u, v_size)
         if self.mod == 0:
-            self.merger = nn.Linear(4, 1)   # seq, t, u, dis --> score
-            # print self.merger.weight
-            # print self.merger.bias
+            self.merger = nn.Linear(4, 1, bias=False)   # seq, t, u, dis --> score
         elif self.mod == 1:
-            self.merger = nn.Linear(5, 1)  # TODO bias = 0
+            self.merger = nn.Linear(5, 1, bias=False)  
         elif self.mod == 2:
             self.merger_al = []
             for _ in xrange(6):
-                self.merger_al.append(nn.Linear(5, 1))
+                self.merger_al.append(nn.Linear(5, 1, bias=False))
         self.att_dim = self.emb_dim_t + self.hidden_dim * 2
-        self.att_M = nn.Parameter(torch.randn(self.att_dim, self.att_dim))  # TODO set zero
-        # print self.att_M
-        # raw_input()
+        self.att_M = nn.Parameter(torch.randn(self.att_dim, self.att_dim))
+        for i in xrange(self.att_dim):
+            for j in xrange(self.att_dim):
+                if i < self.hidden_dim and j < self.hidden_dim:
+                    continue
+                if i >= self.hidden_dim and i < self.hidden_dim * 2 and j > self.hidden_dim and j < self.hidden_dim * 2:
+                    continue
+                if i >= self.hidden_dim * 2 and j > self.hidden_dim * 2:
+                    continue
+                self.att_M.data[i, j] = 0.0
 
     def forward(self, records_u, is_train):
         predicted_scores = Variable(torch.zeros(records_u.get_predicting_records_cnt(mod=0), self.nb_cnt + 1)) if is_train else []
@@ -200,7 +205,7 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
         records_u.summarize()
     model = AttentionModel(dl.nu, dl.nv, dl.nt, sampling_list=dl.sampling_list, vid_coor_nor=dl.vid_coor_nor, vid_pop=dl.vid_pop, mod=mod)
     if iter_start != 0:
-        model.load_state_dict(torch.load(root_path + 'model_attention_' + str(mod) + '_' + str(iter_start) + '.md'))
+        model.load_state_dict(torch.load(root_path + 'model_attention_nobias_' + str(mod) + '_' + str(iter_start) + '.md'))
     optimizer = optim.Adam(model.parameters())
     criterion = NSNLLLoss()
     uids = dl.uid_records.keys()
@@ -219,7 +224,7 @@ def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
                 print 'uid: \t%d\tloss: %f' % (idx, print_loss_total)
         print iter, print_loss_total
         if iter % 1 == 0:
-            torch.save(model.state_dict(), root_path + 'model_attention_' + str(mod) + '_' + str(iter) + '.md')
+            torch.save(model.state_dict(), root_path + 'model_attention_nobias_' + str(mod) + '_' + str(iter) + '.md')
 
 def test(root_path, dataset, iter_start=0, mod=0):
     torch.manual_seed(0)
@@ -231,7 +236,7 @@ def test(root_path, dataset, iter_start=0, mod=0):
         model = AttentionModel(dl.nu, dl.nv, dl.nt, sampling_list=dl.sampling_list, vid_coor_nor=dl.vid_coor_nor,
                                vid_pop=dl.vid_pop, mod=mod)
         if iter_start != 0:
-            model.load_state_dict(torch.load(root_path + 'model_attention_' + str(mod) + '_' + str(iter) + '.md'))
+            model.load_state_dict(torch.load(root_path + 'model_attention_nobias_' + str(mod) + '_' + str(iter) + '.md'))
         hits = np.zeros(3)
         cnt = 0
         for uid, records_u in dl.uid_records.items():
