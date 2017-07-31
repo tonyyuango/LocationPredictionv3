@@ -41,13 +41,17 @@ class AttentionModel(nn.Module):
         self.decoder_t = IndexLinear(self.emb_dim_t, v_size)
         self.decoder_u = IndexLinear(self.emb_dim_u, v_size)
         if self.mod == 0:
-            self.merger = nn.Linear(4, 1, bias=False)   # seq, t, u, dis --> score
+            self.merger_weight = nn.Parameter(torch.ones(1, 4) / 4.0)
+            # self.merger = nn.Linear(4, 1, bias=False)   # u, t, h, d --> score
         elif self.mod == 1:
-            self.merger = nn.Linear(5, 1, bias=False)
+            self.merger_weight = nn.Parameter(torch.ones(1, 5) / 5.0)
+            # self.merger = nn.Linear(5, 1, bias=False)
         elif self.mod == 2:
-            self.merger_al = []
-            for _ in xrange(6):
-                self.merger_al.append(nn.Linear(5, 1, bias=False))
+            self.merger_weight = nn.Parameter(torch.ones(6, 5) / 5.0)
+            # self.merger_al = []
+            # for _ in xrange(6):
+            #     self.merger_al.append(nn.Linear(5, 1, bias=False))
+        print self.merger_weight
         self.att_dim = self.emb_dim_t + self.hidden_dim * 2
         self.att_M = nn.Parameter(torch.ones(self.att_dim, self.att_dim) / self.att_dim)
         for i in xrange(self.att_dim):
@@ -112,16 +116,20 @@ class AttentionModel(nn.Module):
             if self.mod == 0:
                 scores_merge = torch.cat((scores_u, scores_t, scores_h, scores_d_all), 0).t()
                 if is_train:
-                    predicted_scores[id] = F.sigmoid(self.merger(scores_merge).t())
+                    # predicted_scores[id] = F.sigmoid(self.merger(scores_merge).t())
+                    predicted_scores[id] = F.sigmoid(F.linear(scores_merge, self.merger_weight, bias=None).t())
                 else:
-                    predicted_scores.append(F.softmax(self.merger(scores_merge).t()))
+                    # predicted_scores.append(F.softmax(self.merger(scores_merge).t()))
+                    predicted_scores.append(F.softmax(F.linear(scores_merge, self.merger_weight, bias=None).t()))
             elif self.mod == 1:
                 scores_d_pre = self.get_scores_d_pre(records_u, idx, vid_candidates, feature_al, is_train)
                 scores_merge = torch.cat((scores_u, scores_t, scores_h, scores_d_all, scores_d_pre), 0).t()
                 if is_train:
-                    predicted_scores[id] = F.sigmoid(self.merger(scores_merge).t())
+                    # predicted_scores[id] = F.sigmoid(self.merger(scores_merge).t())
+                    predicted_scores[id] = F.sigmoid(F.linear(scores_merge, self.merger_weight, bias=None).t())
                 else:
-                    predicted_scores.append(F.softmax(self.merger(scores_merge).t()))
+                    # predicted_scores.append(F.softmax(self.merger(scores_merge).t()))
+                    predicted_scores.append(F.softmax(F.linear(scores_merge, self.merger_weight, bias=None).t()))
             elif self.mod == 2:
                 scores_d_pre = self.get_scores_d_pre(records_u, idx, vid_candidates, feature_al, is_train)
                 scores_merge = torch.cat((scores_u, scores_t, scores_h, scores_d_all, scores_d_pre), 0).t()
@@ -129,9 +137,11 @@ class AttentionModel(nn.Module):
                 if gap_time >= 6:
                     gap_time = 5
                 if is_train:
-                    predicted_scores[id] = F.sigmoid(self.merger_al[gap_time](scores_merge).t())
+                    # predicted_scores[id] = F.sigmoid(self.merger_al[gap_time](scores_merge).t())
+                    predicted_scores[id] = F.sigmoid(F.linear(scores_merge, self.merger_weight[gap_time].view(1, -1), bias=None).t())
                 else:
-                    predicted_scores.append(F.softmax(self.merger_al[gap_time](scores_merge).t()))
+                    # predicted_scores.append(F.softmax(self.merger_al[gap_time](scores_merge).t()))
+                    predicted_scores.append(F.softmax(F.linear(scores_merge, self.merger_weight[gap_time].view(1, -1), bias=None).t()))
             id += 1
         return predicted_scores, id_vids, id_vids_true
 
