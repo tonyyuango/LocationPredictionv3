@@ -40,23 +40,6 @@ class SpatioTemporalModel(nn.Module):
         dim_merged = self.hidden_dim * 2 + self.emb_dim_u + self.emb_dim_t if mod != -1 else self.hidden_dim * 2 + self.emb_dim_u
         self.decoder = IndexLinear(dim_merged, v_size)
         self.mod = mod
-        if self.mod == 2:
-            self.vid_band = {}
-            for vid in xrange(self.v_size):
-                dists, ids = self.tree.query([self.vid_coor_rad[vid]], 11)
-                self.vid_band[vid] = dists[0, 10]
-                print dists[0, 10] * 6371 * 1000
-            self.kde_coef = 1.0 / math.sqrt(2 * math.pi)
-            self.embedder_gap_time = nn.Embedding(12, 3)
-            self.merger = nn.Linear(3, 1)
-        if self.mod == 3:
-            self.vid_band = {}
-            for vid in xrange(self.v_size):
-                self.vid_band[vid] = 0.000172657 / 2
-            self.kde_coef = 1.0 / math.sqrt(2 * math.pi)
-            self.embedder_gap_time = nn.Embedding(12, 3)
-            self.merger = nn.Linear(3, 1)
-
 
     def forward(self, records_u, is_train, mod=0):
         records_u.summarize()
@@ -244,7 +227,7 @@ class SpatioTemporalModel(nn.Module):
             weight_sum += weight
         return score_sum / weight_sum
 
-def train(root_path, dataset, n_iter=500, iter_start=0, mod=0):
+def train(root_path, dataset, n_iter=200, iter_start=0, mod=0):
     torch.manual_seed(0)
     random.seed(0)
     dl = pickle.load(open(root_path + 'dl_' + dataset + '.pk', 'rb'))
