@@ -1,6 +1,6 @@
 import torch
 import os
-import attention_model
+import attention_model_enhance
 import SimpleModelDecoder
 
 if __name__ == "__main__":
@@ -17,11 +17,11 @@ if __name__ == "__main__":
     iter = int(input('please input last iter: '))
     if task == 0:
         if model == 0:
-            attention_model.train(small_path, dataset, iter_start=iter, mod=mod)
+            attention_model_enhance.train(small_path, dataset, iter_start=iter, mod=mod)
         elif model == 1:
             SimpleModelDecoder.train(small_path, dataset, iter_start=iter, mod=mod)
     else:
         if model == 0:
-            attention_model.test(small_path, dataset, iter_start=iter, mod=mod)
+            attention_model_enhance.test(small_path, dataset, iter_start=iter, mod=mod)
         elif model == 1:
             SimpleModelDecoder.test(small_path, dataset, iter_start=iter, mod=mod)

@@ -1,10 +1,18 @@
-from sklearn.neighbors.kde import KernelDensity
 import numpy as np
-bandwidth = 4
-bandwidth_inv = 1.0 / bandwidth
-x = np.array([3, 2])
-c = np.array([1.5, 1.5])
-coor_diff = x - c
-print coor_diff ** 2
-kde_coef = 1.0 / 2 / np.pi / bandwidth
-print kde_coef * np.exp(-0.5 * np.sum(coor_diff ** 2) * bandwidth_inv)
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.autograd import Variable
+from Loss import NSNLLLoss
+from Loss import DSSMLoss
+import random
+import pickle
+import torch.optim as optim
+from sklearn.neighbors import DistanceMetric
+from sklearn.neighbors import BallTree
+
+
+feature_cur = Variable(torch.zeros(1, 4))
+dist = 0.5
+feature_cat = torch.cat((feature_cur, Variable(torch.FloatTensor([dist])).view(1, -1)), 1)
+print feature_cat
