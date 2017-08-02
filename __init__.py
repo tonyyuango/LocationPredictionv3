@@ -1,7 +1,24 @@
 import torch
 import os
+import pickle
 import attention_model_enhance
 import SimpleModelDecoder
+
+def analyze_session_len(root_path):
+    dl = pickle.load(open(root_path + 'dl_' + dataset + '.pk', 'rb'))
+    len_cnt = {}
+    for _, records_u in dl.uid_records.items():
+        for record in records_u.records:
+            if record.is_first:
+                len = 0
+            len += 1
+            if record.is_last:
+                if len not in len_cnt:
+                    len_cnt[len] = 0
+                len_cnt[len] += 1
+    for len in len_cnt:
+        print len, len_cnt[len]
+    raw_input()
 
 if __name__ == "__main__":
     torch.set_num_threads(1)
