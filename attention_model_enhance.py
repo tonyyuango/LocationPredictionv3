@@ -138,9 +138,9 @@ class AttentionModelNew(nn.Module):
                 merger_weight_linear = F.relu(self.merger_weight_al[gap_time_int]) * weight_lower + F.relu(self.merger_weight_al[gap_time_int + 1]) * weight_upper
                 scores_pre_final = F.linear(scores_merge, merger_weight_linear, bias=None).t()
                 if is_train:
-                    predicted_scores[id] = F.sigmoid(F.relu(scores_pre_final))
+                    predicted_scores[id] = F.sigmoid(scores_pre_final)
                 else:
-                    predicted_scores.append(F.softmax(F.relu(scores_pre_final)))
+                    predicted_scores.append(F.softmax(scores_pre_final))
             elif self.mod == 3:
                 scores_d_pre = self.get_scores_d_pre(records_u, idx, vid_candidates, feature_al, is_train)
                 scores_merge = torch.cat((scores_u, scores_t, scores_hl, scores_hs, scores_d_all, scores_d_pre), 0).t()
