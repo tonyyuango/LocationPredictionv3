@@ -145,11 +145,10 @@ class AttentionModelNew(nn.Module):
                 scores_merge = torch.cat((scores_u, scores_t, scores_hl, scores_hs, scores_d_all, scores_d_pre), 0).t()
                 gap_time = (records_al[idx + 1].dt - record.dt).total_seconds() / 60 / 60
                 gap_time_int = int(gap_time)
-                scores_pre_final = F.linear(scores_merge, self.merger_weight[gap_time_int], bias=None).t()
                 if is_train:
-                    predicted_scores[id] = F.sigmoid(F.relu(scores_pre_final))
+                    predicted_scores[id] = F.sigmoid(F.linear(scores_merge, F.relu(self.merger_weight[gap_time_int].view(1, -1)), bias=None).t())
                 else:
-                    predicted_scores.append(F.softmax(F.relu(scores_pre_final)))
+                    predicted_scores.append(F.softmax(F.linear(scores_merge, F.relu(self.merger_weight[gap_time_int].view(1, -1)), bias=None).t()))
             id += 1
         return predicted_scores, id_vids, id_vids_true
 
