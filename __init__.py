@@ -41,7 +41,7 @@ if __name__ == "__main__":
         else '/shared/data/qyuan/LocationData/'
     small_path = root_path + 'small/'
     dataset = 'foursquare'
-    analyze_time_dist(small_path, 'gowalla')
+    # analyze_time_dist(small_path, 'gowalla')
     task = int(input('please input task (0: train, 1: test, 2: baselines): '))
     model = int(input('please input model (0: our, 1: decoder): '))
     mod = int(input("input mod: "))

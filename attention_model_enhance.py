@@ -46,13 +46,12 @@ class AttentionModelNew(nn.Module):
             self.merger_weight = nn.Parameter(torch.ones(1, 5) / 5.0)
         elif self.mod == 1:
             self.merger_weight = nn.Parameter(torch.ones(1, 6) / 6.0)
-        elif self.mod == 2:
-            self.merger_weight = nn.Parameter(torch.ones(7, 6) / 6.0)
-        elif self.mod == 3:
-            self.merger_weight = nn.Parameter(torch.ones(7, 6) / 6.0)
+        elif self.mod in {2, 3}:
+            self.merger_weight_al = []
+            for _ in xrange(7):
+                self.merger_weight_al.append(nn.Parameter(torch.ones(1, 6) / 6.0))
         self.att_dim = self.emb_dim_t + self.hidden_dim * 2
         self.att_M = nn.Parameter(torch.ones(self.att_dim, self.att_dim) / self.att_dim)  # TODO change back
-        # self.att_M = nn.Parameter(torch.ones(self.att_dim, self.att_dim))
         for i in xrange(self.att_dim):
             for j in xrange(self.att_dim):
                 if i < self.hidden_dim and j < self.hidden_dim:
@@ -136,7 +135,7 @@ class AttentionModelNew(nn.Module):
                 gap_time_int = int(gap_time)
                 weight_lower = gap_time_int + 1 - gap_time
                 weight_upper = gap_time - gap_time_int
-                merger_weight_linear = F.relu(self.merger_weight[gap_time_int].view(1, -1)) * weight_lower + F.relu(self.merger_weight[gap_time_int + 1].view(1, -1)) * weight_upper
+                merger_weight_linear = F.relu(self.merger_weight_al[gap_time_int]) * weight_lower + F.relu(self.merger_weight_al[gap_time_int + 1]) * weight_upper
                 scores_pre_final = F.linear(scores_merge, merger_weight_linear, bias=None).t()
                 if is_train:
                     predicted_scores[id] = F.sigmoid(F.relu(scores_pre_final))
@@ -148,9 +147,9 @@ class AttentionModelNew(nn.Module):
                 gap_time = (records_al[idx + 1].dt - record.dt).total_seconds() / 60 / 60
                 gap_time_int = int(gap_time)
                 if is_train:
-                    predicted_scores[id] = F.sigmoid(F.linear(scores_merge, F.relu(self.merger_weight[gap_time_int].view(1, -1)), bias=None).t())
+                    predicted_scores[id] = F.sigmoid(F.linear(scores_merge, F.relu(self.merger_weight_al[gap_time_int]), bias=None).t())
                 else:
-                    predicted_scores.append(F.softmax(F.linear(scores_merge, F.relu(self.merger_weight[gap_time_int].view(1, -1)), bias=None).t()))
+                    predicted_scores.append(F.softmax(F.linear(scores_merge, F.relu(self.merger_weight_al[gap_time_int]), bias=None).t()))
             id += 1
         return predicted_scores, id_vids, id_vids_true
 
