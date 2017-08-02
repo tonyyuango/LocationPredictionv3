@@ -4,7 +4,20 @@ import pickle
 import attention_model_enhance
 import SimpleModelDecoder
 
-def analyze_session_len(root_path):
+def analyze_time_dist(root_path, dataset):
+    dl = pickle.load(open(root_path + 'dl_' + dataset + '.pk', 'rb'))
+    tid_cnt = {}
+    for _, records_u in dl.uid_records.items():
+        for record in records_u.records:
+            tid = record.tid % 24
+            if tid not in tid_cnt:
+                tid_cnt[tid] = 0
+            tid_cnt[tid] += 1
+    for tid in sorted(tid_cnt.keys()):
+        print tid, tid_cnt[tid]
+    raw_input()
+
+def analyze_session_len(root_path, dataset):
     dl = pickle.load(open(root_path + 'dl_' + dataset + '.pk', 'rb'))
     len_cnt = {}
     for _, records_u in dl.uid_records.items():
@@ -28,6 +41,7 @@ if __name__ == "__main__":
         else '/shared/data/qyuan/LocationData/'
     small_path = root_path + 'small/'
     dataset = 'foursquare'
+    analyze_time_dist(small_path, 'gowalla')
     task = int(input('please input task (0: train, 1: test, 2: baselines): '))
     model = int(input('please input model (0: our, 1: decoder): '))
     mod = int(input("input mod: "))

@@ -51,7 +51,8 @@ class AttentionModelNew(nn.Module):
         elif self.mod == 3:
             self.merger_weight = nn.Parameter(torch.ones(7, 6) / 6.0)
         self.att_dim = self.emb_dim_t + self.hidden_dim * 2
-        self.att_M = nn.Parameter(torch.ones(self.att_dim, self.att_dim) / self.att_dim)
+        self.att_M = nn.Parameter(torch.ones(self.att_dim, self.att_dim) / self.att_dim)  # TODO change back
+        # self.att_M = nn.Parameter(torch.ones(self.att_dim, self.att_dim))
         for i in xrange(self.att_dim):
             for j in xrange(self.att_dim):
                 if i < self.hidden_dim and j < self.hidden_dim:
@@ -66,6 +67,7 @@ class AttentionModelNew(nn.Module):
         self.att_merger.weight.data[0, 1] = -0.5
 
     def forward(self, records_u, is_train):
+
         predicted_scores = Variable(torch.zeros(records_u.get_predicting_records_cnt(mod=0), self.nb_cnt + 1)) if is_train else []
         records_al = records_u.get_records(mod=0) if is_train else records_u.get_records(mod=2)
         vids_visited = set([record.vid for record in records_u.get_records(mod=0)])
