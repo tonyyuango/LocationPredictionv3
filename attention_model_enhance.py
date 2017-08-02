@@ -48,6 +48,8 @@ class AttentionModelNew(nn.Module):
             self.merger_weight = nn.Parameter(torch.ones(1, 6) / 6.0)
         elif self.mod == 2:
             self.merger_weight = nn.Parameter(torch.ones(7, 6) / 6.0)
+        elif self.mod == 3:
+            self.merger_weight = nn.Parameter(torch.ones(7, 6) / 6.0)
         self.att_dim = self.emb_dim_t + self.hidden_dim * 2
         self.att_M = nn.Parameter(torch.ones(self.att_dim, self.att_dim) / self.att_dim)
         for i in xrange(self.att_dim):
@@ -134,6 +136,16 @@ class AttentionModelNew(nn.Module):
                 weight_upper = gap_time - gap_time_int
                 merger_weight_linear = F.relu(self.merger_weight[gap_time_int].view(1, -1)) * weight_lower + F.relu(self.merger_weight[gap_time_int + 1].view(1, -1)) * weight_upper
                 scores_pre_final = F.linear(scores_merge, merger_weight_linear, bias=None).t()
+                if is_train:
+                    predicted_scores[id] = F.sigmoid(F.relu(scores_pre_final))
+                else:
+                    predicted_scores.append(F.softmax(F.relu(scores_pre_final)))
+            elif self.mod == 3:
+                scores_d_pre = self.get_scores_d_pre(records_u, idx, vid_candidates, feature_al, is_train)
+                scores_merge = torch.cat((scores_u, scores_t, scores_hl, scores_hs, scores_d_all, scores_d_pre), 0).t()
+                gap_time = (records_al[idx + 1].dt - record.dt).total_seconds() / 60 / 60
+                gap_time_int = int(gap_time)
+                scores_pre_final = F.linear(scores_merge, self.merger_weight[gap_time_int], bias=None).t()
                 if is_train:
                     predicted_scores[id] = F.sigmoid(F.relu(scores_pre_final))
                 else:
